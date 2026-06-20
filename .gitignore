@@ -1,0 +1,62 @@
+# =========================
+# Java / Spring Boot
+# =========================
+
+# Maven
+target/
+
+# Gradle
+.gradle/
+build/
+
+# Logs
+*.log
+logs/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# Eclipse
+.project
+.classpath
+.settings/
+
+# NetBeans
+nbproject/private/
+build/
+dist/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Env files
+.env
+
+# Temporary files
+*.tmp
+*.swp
+
+# Java compiled files
+*.class
+
+# Jar/WAR files
+*.jar
+*.war
+
+# Spring Boot generated files
+application-local.properties
+application-dev.properties
+
+# Node modules (if frontend exists)
+node_modules/
+
+# Docker
+*.pid
+
+# Mac/Linux hidden files
+._*
