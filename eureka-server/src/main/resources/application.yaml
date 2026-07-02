@@ -5,10 +5,32 @@ spring:
 eureka:
   instance:
     hostname: localhost
+
   client:
     fetch-registry: false
     register-with-eureka: false
-  
-  
+
 server:
   port: 8761
+
+management:
+  # server:
+    # port: 8761          # Optional (same port as application)
+    # port: 9001        # Uncomment if you want actuator on a separate port
+
+  endpoints:
+    web:
+      # base-path: /actuator
+      exposure:
+        include: "*"
+
+  endpoint:
+    health:
+      show-details: always
+
+    shutdown:
+      access: UNRESTRICTED
+
+  health:
+    defaults:
+      enabled: true
