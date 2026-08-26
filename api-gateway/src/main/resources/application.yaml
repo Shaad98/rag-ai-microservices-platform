@@ -1,0 +1,12 @@
+spring:
+    application:
+        name: ${SERVICE_NAME}
+    config:
+        import: configserver:http://${GATEWAY_CONFIG_CREDENTIALS}@${CONFIG_SERVER_DOMAIN}
+
+info:
+  app:
+    name: ${SERVICE_NAME}
+    description: ${SERVICE_DESCRIPTION}
+    version: ${SERVICE_VERSION}
+    author: ${AUTHOR_NAME}
