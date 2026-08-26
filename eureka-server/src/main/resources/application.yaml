@@ -1,17 +1,17 @@
 spring:
   application:
-    name: eureka-server
+    name: ${SERVICE_NAME}
 
 eureka:
   instance:
-    hostname: localhost
+    hostname: ${SERVICE_DOMAIN}
 
   client:
     fetch-registry: false
     register-with-eureka: false
 
 server:
-  port: 8761
+  port: ${SERVER_PORT}
 
 management:
   # server:
@@ -28,8 +28,8 @@ management:
     health:
       show-details: always
 
-    shutdown:
-      access: UNRESTRICTED
+    # shutdown:
+    #   access: UNRESTRICTED
 
   health:
     defaults:
