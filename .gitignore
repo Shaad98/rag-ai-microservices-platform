@@ -60,3 +60,9 @@ node_modules/
 
 # Mac/Linux hidden files
 ._*
+
+# Ignore JWT authentication keys 
+
+**/keys/
+*.pem
+*.key
