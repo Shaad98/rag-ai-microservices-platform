@@ -1,18 +1,24 @@
 spring:
   application:
-    name: config-server
+    name: ${SERVICE_NAME}
 
   cloud:
     config:
       server:
         git:
-          uri: https://github.com/Shaad98/rag-config-repo.git
+          uri: ${GIT_CONFIG_REPO_URL}
           default-label: main
           clone-on-start: false
           force-pull: true
 
+  services:
+    creds:
+      identity-svc-name: ${IDENTITY_SVC_NAME}
+      identity-svc-password: ${IDENTITY_SVC_PASSWORD}
+      gateway-svc-name: ${GATEWAY_SVC_NAME}
+      gateway-svc-password: ${GATEWAY_SVC_PASSWORD}
 server:
-  port: 8888
+  port: ${SERVER_PORT}
 
 eureka:
   instance:
@@ -21,7 +27,7 @@ eureka:
     fetch-registry: true
     register-with-eureka: true
     service-url:
-      defaultZone: http://localhost:8761/eureka
+      defaultZone: ${EUREKA_SERVER_URL}
 
 management:
   endpoints:
@@ -30,8 +36,8 @@ management:
                 
         include: "*"  # health,info,refresh
   endpoint:
-    shutdown:
-      access: UNRESTRICTED
+    # shutdown:
+    #   access: UNRESTRICTED
     health:
       show-details: always
   
@@ -39,3 +45,10 @@ management:
     defaults:
       enabled: true
     
+info:
+  app:
+    name: ${SERVICE_NAME}
+    description: ${SERVICE_DESCRIPTION}
+    version: ${SERVICE_VERSION}
+    author: ${AUTHOR_NAME}
+
