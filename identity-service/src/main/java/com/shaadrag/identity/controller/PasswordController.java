@@ -210,5 +210,36 @@ public class PasswordController {
         return ResponseEntity.ok().build();
     }
 
-   
+    @PostMapping("/change")
+    public ResponseEntity<Void> changePassword(
+            @RequestBody ChangePasswordRequest request,
+            Authentication authentication) {
+
+        String email = authentication.getName();
+
+        Optional<User> userOptional =
+                userRepository.findByEmail(email);
+
+        if (userOptional.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        User user = userOptional.get();
+
+        // Verify current password against stored BCrypt hash
+        if (!passwordEncoder.matches(
+                request.getCurrentPassword(),
+                user.getPassword())) {
+
+            return ResponseEntity.badRequest().build();
+        }
+
+        user.setPassword(
+                passwordEncoder.encode(request.getNewPassword())
+        );
+
+        userRepository.save(user);
+
+        return ResponseEntity.ok().build();
+    }
 }
