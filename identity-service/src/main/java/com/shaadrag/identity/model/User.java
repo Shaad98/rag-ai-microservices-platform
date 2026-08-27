@@ -42,8 +42,12 @@ public class User implements UserDetails {
     private String fullName;
     private String email;
 
-    private Integer passwordChangeOtp;
+    // private Integer passwordChangeOtp;
+
+    @Column(unique = true)
     private String passwordResetToken;
+
+    private LocalDateTime passwordResetTokenExpiry;
 
     private Boolean isEnabled;
 

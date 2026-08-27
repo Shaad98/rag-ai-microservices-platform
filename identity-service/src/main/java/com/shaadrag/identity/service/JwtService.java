@@ -3,7 +3,7 @@ package com.shaadrag.identity.service;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.Date;
-import java.util.Map;
+
 
 // import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -23,52 +23,11 @@ public class JwtService {
     private final PrivateKey privateKey;
     private final PublicKey publicKey;
 
-    // @Value("${jwt.access-token-expiration}")
-    // private long accessTokenExpiration;
+
 
     private final long accessTokenExpiration = 10 * 60 * 1000;
 
-    // public JwtService(
-    // PrivateKey privateKey,
-    // PublicKey publicKey) {
-
-    // this.privateKey = privateKey;
-    // this.publicKey = publicKey;
-    // }
-
-    // public String generateAccessToken(
-    // UserDetails userDetails) {
-
-    // return generateAccessToken(
-    // Map.of(),
-    // userDetails.getUsername()
-    // );
-    // }
-
-    // public String generateAccessToken(
-    // Map<String, Object> extraClaims,
-    // String username) {
-
-    // Date now = new Date();
-
-    // Date expiration =
-    // new Date(
-    // now.getTime()
-    // + accessTokenExpiration
-    // );
-
-    // return Jwts.builder()
-    // .claims(extraClaims)
-    // .subject(username)
-    // .issuedAt(now)
-    // .expiration(expiration)
-    // .signWith(
-    // privateKey,
-    // Jwts.SIG.RS256
-    // )
-    // .compact();
-    // }
-
+  
     public String generateAccessToken(UserDetails userDetails) {
 
         User user = (User) userDetails;
