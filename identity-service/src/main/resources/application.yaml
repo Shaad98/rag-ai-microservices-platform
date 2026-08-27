@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: ${SERVICE_NAME}
+
+  # datasource:
+  #   url: ${DB_URL}
+  #   username: postgres
+  #   password: root
+  #   driver-class-name: org.postgresql.Driver
+  
+  # jpa:
+  #   hibernate:
+  #     ddl-auto: update
+  #   database-platform: ${HIBERNATE_DIALECT}
+    
+  config:
+    import: ${IDENTITY_CONFIG_URL}
+
