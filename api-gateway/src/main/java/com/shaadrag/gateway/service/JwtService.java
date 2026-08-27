@@ -24,10 +24,16 @@ public class JwtService {
                 .getPayload();
     }
 
-    public String extractUsername(String token) {
+    public String extractId(String token) {
 
         return extractAllClaims(token)
                 .getSubject();
+    }
+
+    public String extractEmail(String token) {
+
+        return extractAllClaims(token)
+                .get("email",String.class);
     }
 
     public boolean isTokenValid(String token) {
