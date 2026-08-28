@@ -1,7 +1,5 @@
 package com.shaadrag.gateway.config;
 
-
-
 import com.shaadrag.gateway.security.JwtAuthenticationFilter;
 
 import lombok.RequiredArgsConstructor;
@@ -26,7 +24,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+// import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
 @Configuration
 @EnableWebSecurity
@@ -40,37 +38,44 @@ public class SecurityConfig {
             throws Exception {
 
         http
-            .csrf(csrf -> csrf
-                .csrfTokenRepository(
-                    CookieCsrfTokenRepository.withHttpOnlyFalse()
-                )
-                .requireCsrfProtectionMatcher(request ->
-                    request.getMethod().equals("POST")
-                    && request.getServletPath().equals("/auth/refresh")
-                )
-            )
+                // .csrf(csrf -> csrf
+                // .csrfTokenRepository(
+                // CookieCsrfTokenRepository.withHttpOnlyFalse()
+                // )
+                // .requireCsrfProtectionMatcher(request ->
+                // request.getMethod().equals("POST")
+                // && request.getServletPath().equals("/auth/refresh")
+                // )
+                // )
 
-            .sessionManagement(session ->
-                session.sessionCreationPolicy(
-                    SessionCreationPolicy.STATELESS
-                )
-            )
+                // .csrf(csrf -> csrf
+                //         .csrfTokenRepository(
+                //                 CookieCsrfTokenRepository.withHttpOnlyFalse())
+                //         .requireCsrfProtectionMatcher(request -> request.getMethod().equals("POST")
+                //                 && (request.getServletPath().equals("/auth/refresh")
+                //                         || request.getServletPath().equals("/auth/logout"))))
 
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers(
-                    "/auth/register",
-                    "/auth/login",
-                    "/auth/refresh",
-                    "/actuator/health"
-                ).permitAll()
 
-                .anyRequest().authenticated()
-            )
+                .csrf(customizer->customizer.disable())
 
-            .addFilterBefore(
-                jwtAuthenticationFilter,
-                UsernamePasswordAuthenticationFilter.class
-            );
+                .sessionManagement(session -> session.sessionCreationPolicy(
+                        SessionCreationPolicy.STATELESS))
+
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "/auth/register",
+                                "/auth/login",
+                                "/auth/logout",
+                                "/auth/refresh",
+                                "/actuator/health")
+                        .permitAll()
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+
+                        .anyRequest().authenticated())
+
+                .addFilterBefore(
+                        jwtAuthenticationFilter,
+                        UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

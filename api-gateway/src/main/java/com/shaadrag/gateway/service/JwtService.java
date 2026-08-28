@@ -24,7 +24,7 @@ public class JwtService {
                 .getPayload();
     }
 
-    public String extractId(String token) {
+    public String extractUserId(String token) {
 
         return extractAllClaims(token)
                 .getSubject();
@@ -34,6 +34,12 @@ public class JwtService {
 
         return extractAllClaims(token)
                 .get("email",String.class);
+    }
+
+    public String extractRole(String token) {
+
+        return extractAllClaims(token)
+                .get("role",String.class);
     }
 
     public boolean isTokenValid(String token) {
