@@ -31,52 +31,54 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+        private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http)
-            throws Exception {
+        @Bean
+        SecurityFilterChain securityFilterChain(HttpSecurity http)
+                        throws Exception {
 
-        http
-                // .csrf(csrf -> csrf
-                // .csrfTokenRepository(
-                // CookieCsrfTokenRepository.withHttpOnlyFalse()
-                // )
-                // .requireCsrfProtectionMatcher(request ->
-                // request.getMethod().equals("POST")
-                // && request.getServletPath().equals("/auth/refresh")
-                // )
-                // )
+                http
+                                // .csrf(csrf -> csrf
+                                // .csrfTokenRepository(
+                                // CookieCsrfTokenRepository.withHttpOnlyFalse()
+                                // )
+                                // .requireCsrfProtectionMatcher(request ->
+                                // request.getMethod().equals("POST")
+                                // && request.getServletPath().equals("/auth/refresh")
+                                // )
+                                // )
 
-                // .csrf(csrf -> csrf
-                //         .csrfTokenRepository(
-                //                 CookieCsrfTokenRepository.withHttpOnlyFalse())
-                //         .requireCsrfProtectionMatcher(request -> request.getMethod().equals("POST")
-                //                 && (request.getServletPath().equals("/auth/refresh")
-                //                         || request.getServletPath().equals("/auth/logout"))))
+                                // .csrf(csrf -> csrf
+                                // .csrfTokenRepository(
+                                // CookieCsrfTokenRepository.withHttpOnlyFalse())
+                                // .requireCsrfProtectionMatcher(request -> request.getMethod().equals("POST")
+                                // && (request.getServletPath().equals("/auth/refresh")
+                                // || request.getServletPath().equals("/auth/logout"))))
 
+                                .csrf(customizer -> customizer.disable())
 
-                .csrf(customizer->customizer.disable())
+                                .sessionManagement(session -> session.sessionCreationPolicy(
+                                                SessionCreationPolicy.STATELESS))
 
-                .sessionManagement(session -> session.sessionCreationPolicy(
-                        SessionCreationPolicy.STATELESS))
+                                .authorizeHttpRequests(auth -> auth
+                                                .requestMatchers(
+                                                                "/auth/register",
+                                                                "/auth/login",
+                                                                "/auth/logout",
+                                                                "/auth/refresh",
+                                                                "/actuator/health")
+                                                .permitAll()
+                                                .requestMatchers(
+                                                                "/email-verification/verify")
+                                                .permitAll()
+                                                .requestMatchers("/admin/**").hasRole("ADMIN")
 
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/auth/register",
-                                "/auth/login",
-                                "/auth/logout",
-                                "/auth/refresh",
-                                "/actuator/health")
-                        .permitAll()
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                                                .anyRequest().authenticated())
 
-                        .anyRequest().authenticated())
+                                .addFilterBefore(
+                                                jwtAuthenticationFilter,
+                                                UsernamePasswordAuthenticationFilter.class);
 
-                .addFilterBefore(
-                        jwtAuthenticationFilter,
-                        UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
-    }
+                return http.build();
+        }
 }
