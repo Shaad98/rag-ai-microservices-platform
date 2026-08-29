@@ -24,85 +24,92 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+// import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+        private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(
-            HttpSecurity http,
-            AuthenticationProvider authenticationProvider)
-            throws Exception {
+        @Bean
+        public SecurityFilterChain securityFilterChain(
+                        HttpSecurity http,
+                        AuthenticationProvider authenticationProvider)
+                        throws Exception {
 
-        http
-                .csrf(csrf -> csrf.disable())
+                http
+                                .csrf(csrf -> csrf.disable())
 
-                // Gateway will take care of the endpoint /auth/refresh no need to create ambiguity
+                                // Gateway will take care of the endpoint /auth/refresh no need to create
+                                // ambiguity
 
-                
-                // .csrf(csrf -> csrf
-                //         // .ignoringRequestMatchers("/user/**")
-                //         .csrfTokenRepository(
-                //                 CookieCsrfTokenRepository.withHttpOnlyFalse())
-                //         .requireCsrfProtectionMatcher(request -> request.getMethod().equals("POST")
-                //                 && request.getServletPath().equals("/auth/refresh")))
+                                // .csrf(csrf -> csrf
+                                // // .ignoringRequestMatchers("/user/**")
+                                // .csrfTokenRepository(
+                                // CookieCsrfTokenRepository.withHttpOnlyFalse())
+                                // .requireCsrfProtectionMatcher(request -> request.getMethod().equals("POST")
+                                // && request.getServletPath().equals("/auth/refresh")))
 
-                .sessionManagement(session -> session.sessionCreationPolicy(
-                        SessionCreationPolicy.STATELESS))
+                                .sessionManagement(session -> session.sessionCreationPolicy(
+                                                SessionCreationPolicy.STATELESS))
 
-                .authenticationProvider(authenticationProvider)
+                                .authenticationProvider(authenticationProvider)
 
-                .authorizeHttpRequests(auth -> auth
+                                .authorizeHttpRequests(auth -> auth
 
-                        .requestMatchers(
-                                "/auth/register",
-                                "/auth/login",
-                                "/auth/refresh")
-                        .permitAll()
+                                                .requestMatchers(
+                                                                "/auth/register",
+                                                                "/auth/login",
+                                                                "/auth/refresh",
+                                                                "/auth/logout")
+                                                .permitAll()
 
-                        .requestMatchers(
-                                "/actuator/health")
-                        .permitAll()
+                                                .requestMatchers(
+                                                                "/email-verification/verify")
+                                                .permitAll()
 
-                        .anyRequest().authenticated())
+                                                .requestMatchers(
+                                                                "/actuator/health")
+                                                .permitAll()
 
-                // ⭐ JWT filter runs before Spring's
-                // UsernamePasswordAuthenticationFilter
-                .addFilterBefore(
-                        jwtAuthenticationFilter,
-                        UsernamePasswordAuthenticationFilter.class);
+                                                .requestMatchers("/admin/**").hasRole("ADMIN")
 
-        return http.build();
-    }
+                                                .anyRequest().authenticated())
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+                                // ⭐ JWT filter runs before Spring's
+                                // UsernamePasswordAuthenticationFilter
+                                .addFilterBefore(
+                                                jwtAuthenticationFilter,
+                                                UsernamePasswordAuthenticationFilter.class);
 
-    @Bean
-    public AuthenticationProvider authenticationProvider(
-            UserDetailsService userDetailsService,
-            PasswordEncoder passwordEncoder) {
+                return http.build();
+        }
 
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
+        @Bean
+        public PasswordEncoder passwordEncoder() {
+                return new BCryptPasswordEncoder();
+        }
 
-        // provider.setUserDetailsService();
-        provider.setPasswordEncoder(passwordEncoder);
+        @Bean
+        public AuthenticationProvider authenticationProvider(
+                        UserDetailsService userDetailsService,
+                        PasswordEncoder passwordEncoder) {
 
-        return provider;
-    }
+                DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
 
-    @Bean
-    public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration configuration)
-            throws Exception {
+                // provider.setUserDetailsService();
+                provider.setPasswordEncoder(passwordEncoder);
 
-        return configuration.getAuthenticationManager();
-    }
+                return provider;
+        }
+
+        @Bean
+        public AuthenticationManager authenticationManager(
+                        AuthenticationConfiguration configuration)
+                        throws Exception {
+
+                return configuration.getAuthenticationManager();
+        }
 }

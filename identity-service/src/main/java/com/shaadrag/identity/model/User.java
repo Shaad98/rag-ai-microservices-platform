@@ -49,6 +49,11 @@ public class User implements UserDetails {
 
     private LocalDateTime passwordResetTokenExpiry;
 
+    @Column(unique = true)
+    private String emailVerificationToken;
+
+    private LocalDateTime emailVerificationTokenExpiry;
+
     private Boolean isEnabled;
 
     @Column(nullable = false)
