@@ -66,8 +66,12 @@ public class SecurityConfig {
                                                                 "/auth/login",
                                                                 "/auth/logout",
                                                                 "/auth/refresh",
+                                                                "/auth/csrf",
+                                                                "/error",
                                                                 "/actuator/health")
                                                 .permitAll()
+                                                
+                                                .requestMatchers("/actuator/gateway/**").permitAll()
                                                 .requestMatchers(
                                                                 "/email-verification/verify")
                                                 .permitAll()

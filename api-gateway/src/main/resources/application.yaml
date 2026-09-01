@@ -2,7 +2,7 @@ spring:
     application:
         name: ${SERVICE_NAME}
     config:
-        import: configserver:http://${GATEWAY_CONFIG_CREDENTIALS}@${CONFIG_SERVER_DOMAIN}
+        import: configserver:${GATEWAY_CONFIG_URL}
 
 info:
   app:
@@ -10,3 +10,10 @@ info:
     description: ${SERVICE_DESCRIPTION}
     version: ${SERVICE_VERSION}
     author: ${AUTHOR_NAME}
+
+logging:
+  level:
+    '[org.springframework.security]': DEBUG
+    '[org.springframework.cloud.gateway]': DEBUG
+    '[org.springframework.web]': DEBUG
+    '[org.springframework.cloud.gateway.server.mvc]': DEBUG
