@@ -1,7 +1,9 @@
 package com.shaadrag.gateway.controller;
 
 import com.shaadrag.gateway.client.IdentityClient;
-import com.shaadrag.gateway.dto.AuthResponse;
+import com.shaadrag.gateway.dto.request.LoginRequest;
+import com.shaadrag.gateway.dto.response.AuthResponse;
+import com.shaadrag.gateway.dto.response.LoginResponse;
 import com.shaadrag.gateway.service.CsrfTokenService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -81,6 +83,30 @@ public class GatewayAuthController {
         return identityResponse;
     }
 
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponse> login(
+            @RequestBody LoginRequest request,
+            HttpServletResponse response) {
+
+        ResponseEntity<LoginResponse> identityResponse = identityClient.login(request);
+
+        LoginResponse body = identityResponse.getBody();
+
+        if (body == null) {
+            return ResponseEntity.status(500).build();
+        }
+
+        addCookie(
+                response,
+                REFRESH_COOKIE,
+                body.refreshToken(),
+                true,
+                Duration.ofDays(1));
+
+        return ResponseEntity.ok(
+                new LoginResponse(body.accessToken(),body.refreshToken()));
+    }
+
     /*
      * Logs the user out.
      *
@@ -149,7 +175,6 @@ public class GatewayAuthController {
     // return csrfTokenService.validate(headerToken);
     // }
 
-    
     /**
      * Validates the CSRF token sent by the frontend.
      *
