@@ -7,6 +7,8 @@ spring:
       server:
         git:
           uri: ${GIT_CONFIG_REPO_URL}
+          username: ${GIT_USERNAME}
+          password: ${GIT_TOKEN}
           default-label: main
           clone-on-start: false
           force-pull: true
