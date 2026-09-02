@@ -60,6 +60,7 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "usersByEmail", key = "#email")
     public UserResponse getUserByEmail(String email) {
 
         User user = userRepository.findByEmail(email)
@@ -68,6 +69,7 @@ public class UserService {
         return getUser(user.getUserId());
     }
 
+    @CachePut(value = "usersByEmail", key = "#email")
     public UserResponse updateUserByEmail(
             String email,
             String fullName,
@@ -80,6 +82,16 @@ public class UserService {
                 user.getUserId(),
                 fullName,
                 dateOfBirth);
+    }
+
+    @CacheEvict(value = "usersByEmail", key = "#email")
+    public void deleteUserByEmail(String email) {
+
+        if (!userRepository.existsByEmail(email)) {
+            throw new RuntimeException("User not found");
+        }
+
+        userRepository.deleteByEmail(email);
     }
 
     @CachePut(value = "users", key = "#userId")
