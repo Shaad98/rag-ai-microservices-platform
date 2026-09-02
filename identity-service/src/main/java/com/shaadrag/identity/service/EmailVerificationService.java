@@ -2,7 +2,7 @@ package com.shaadrag.identity.service;
 
 import com.shaadrag.identity.model.User;
 import com.shaadrag.identity.repository.UserRepository;
-import jakarta.mail.MessagingException;
+// import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -20,7 +20,7 @@ public class EmailVerificationService {
     @Value("${user.frontend-url}")
     private String frontendUrl;
 
-    public void sendVerificationEmail(User user) throws MessagingException {
+    public void sendVerificationEmail(User user)  {
 
         String verificationToken = UUID.randomUUID().toString();
 

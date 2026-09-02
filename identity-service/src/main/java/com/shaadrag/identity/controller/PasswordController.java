@@ -17,7 +17,7 @@ import com.shaadrag.identity.model.User;
 import com.shaadrag.identity.repository.UserRepository;
 import com.shaadrag.identity.service.EmailService;
 
-import jakarta.mail.MessagingException;
+// import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -34,11 +34,9 @@ public class PasswordController {
 
     @PostMapping("/forgot")
     public ResponseEntity<Void> forgotPassword(
-            @RequestBody ForgotPasswordRequest request)
-            throws MessagingException {
+            @RequestBody ForgotPasswordRequest request) {
 
-        Optional<User> userOptional =
-                userRepository.findByEmail(request.getEmail());
+        Optional<User> userOptional = userRepository.findByEmail(request.getEmail());
 
         if (userOptional.isEmpty()) {
             return ResponseEntity.ok().build();
@@ -50,13 +48,11 @@ public class PasswordController {
 
         user.setPasswordResetToken(resetToken);
         user.setPasswordResetTokenExpiry(
-                LocalDateTime.now().plusMinutes(15)
-        );
+                LocalDateTime.now().plusMinutes(15));
 
         userRepository.save(user);
 
-        String resetLink =
-                frontendUrl + "/reset?token=" + resetToken;
+        String resetLink = frontendUrl + "/reset?token=" + resetToken;
 
         String html = """
                 <!DOCTYPE html>
@@ -169,8 +165,7 @@ public class PasswordController {
         emailService.sendHTMLInEmail(
                 user.getEmail(),
                 "Reset Your ShaadRAG Password",
-                html
-        );
+                html);
 
         return ResponseEntity.ok().build();
     }
@@ -179,10 +174,8 @@ public class PasswordController {
     public ResponseEntity<Void> resetPassword(
             @RequestBody ResetPasswordRequest request) {
 
-        Optional<User> userOptional =
-                userRepository.findByPasswordResetToken(
-                        request.getToken()
-                );
+        Optional<User> userOptional = userRepository.findByPasswordResetToken(
+                request.getToken());
 
         if (userOptional.isEmpty()) {
             return ResponseEntity.badRequest().build();
@@ -191,15 +184,14 @@ public class PasswordController {
         User user = userOptional.get();
 
         if (user.getPasswordResetTokenExpiry() == null ||
-            user.getPasswordResetTokenExpiry()
-                    .isBefore(LocalDateTime.now())) {
+                user.getPasswordResetTokenExpiry()
+                        .isBefore(LocalDateTime.now())) {
 
             return ResponseEntity.badRequest().build();
         }
 
         user.setPassword(
-                passwordEncoder.encode(request.getNewPassword())
-        );
+                passwordEncoder.encode(request.getNewPassword()));
 
         // Invalidate reset token after successful password reset
         user.setPasswordResetToken(null);
@@ -217,8 +209,7 @@ public class PasswordController {
 
         String email = authentication.getName();
 
-        Optional<User> userOptional =
-                userRepository.findByEmail(email);
+        Optional<User> userOptional = userRepository.findByEmail(email);
 
         if (userOptional.isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -235,8 +226,7 @@ public class PasswordController {
         }
 
         user.setPassword(
-                passwordEncoder.encode(request.getNewPassword())
-        );
+                passwordEncoder.encode(request.getNewPassword()));
 
         userRepository.save(user);
 

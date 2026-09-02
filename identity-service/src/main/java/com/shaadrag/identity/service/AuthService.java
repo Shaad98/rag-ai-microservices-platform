@@ -5,7 +5,7 @@ import com.shaadrag.identity.dto.request.RegisterRequest;
 import com.shaadrag.identity.dto.response.LoginResponse;
 import com.shaadrag.identity.dto.response.RefreshTokenResponse;
 import com.shaadrag.identity.dto.response.RegisterResponse;
-import com.shaadrag.identity.exception.EmailSendingException;
+// import com.shaadrag.identity.exception.EmailSendingException;
 import com.shaadrag.identity.exception.EmailVerificationRequiredException;
 import com.shaadrag.identity.exception.UserAlreadyExistsException;
 import com.shaadrag.identity.exception.UserNotFoundException;
@@ -13,7 +13,7 @@ import com.shaadrag.identity.model.RefreshTokenData;
 import com.shaadrag.identity.model.Role;
 import com.shaadrag.identity.model.User;
 import com.shaadrag.identity.repository.UserRepository;
-import jakarta.mail.MessagingException;
+// import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.DisabledException;
@@ -59,27 +59,20 @@ public class AuthService {
 
                         LocalDateTime expiry = existingUser.getEmailVerificationTokenExpiry();
 
-                        // Existing verification token is still valid
                         LocalDateTime now = LocalDateTime.now();
 
-                        if (expiry != null && expiry.isAfter(now.plusMinutes(3))) {
+                        // Existing verification token is still valid
+                        if (expiry != null &&
+                                        expiry.isAfter(now.plusMinutes(3))) {
 
                                 throw new EmailVerificationRequiredException(
                                                 "Please verify your email before registering again");
                         }
 
-                        // Verification token expired or missing -> send a new one
-                        try {
-
-                                emailVerificationService.sendVerificationEmail(
-                                                existingUser);
-
-                        } catch (MessagingException mailException) {
-
-                                throw new EmailSendingException(
-                                                "Failed to send verification email",
-                                                mailException);
-                        }
+                        // Token expired or missing
+                        // Generate new token and send email asynchronously
+                        emailVerificationService.sendVerificationEmail(
+                                        existingUser);
 
                         return new RegisterResponse(
                                         "Your verification link expired. "
@@ -91,39 +84,27 @@ public class AuthService {
 
                 user.setFullName(request.getFullName());
                 user.setEmail(request.getEmail());
+                user.setPassword(request.getPassword());
+                user.setDateOfBirth(request.getDateOfBirth());
+                user.setRole(Role.MEMBER);
+
+                // User must verify email
+                user.setIsEnabled(false);
 
                 /*
                  * UserService:
                  * - encodes password
                  * - saves user
                  */
-                user.setPassword(request.getPassword());
-
-                user.setDateOfBirth(request.getDateOfBirth());
-                user.setRole(Role.MEMBER);
-
-                // New user must verify email
-                user.setIsEnabled(false);
-
                 User savedUser = userService.saveUser(user);
 
-                // Generate verification token + send email
-                try {
-
-                        emailVerificationService.sendVerificationEmail(
-                                        savedUser);
-
-                } catch (MessagingException mailException) {
-
-                        throw new EmailSendingException(
-                                        "Failed to send verification email",
-                                        mailException);
-                }
+                // Send verification email asynchronously
+                emailVerificationService.sendVerificationEmail(
+                                savedUser);
 
                 return new RegisterResponse(
                                 "Registration successful. Please verify your email.");
         }
-
         // =========================================================
         // 2. LOGIN
         // =========================================================
@@ -132,31 +113,20 @@ public class AuthService {
 
                 try {
 
-                        /*
-                         * AuthenticationManager checks:
-                         * - email exists
-                         * - password matches
-                         * - account is enabled
-                         */
                         Authentication authentication = authenticationManager.authenticate(
                                         new UsernamePasswordAuthenticationToken(
                                                         request.getEmail(),
                                                         request.getPassword()));
 
-                        /*
-                         * Authentication.getName() returns the email
-                         * because UserDetails.getUsername() returns email.
-                         */
                         String email = authentication.getName();
 
-                        // Get the actual User entity
-                        User user = userRepository.findByEmail(email)
-                                        .orElseThrow(() -> new UserNotFoundException("User not found"));
+                        User user = userRepository
+                                        .findByEmail(email)
+                                        .orElseThrow(() -> new UserNotFoundException(
+                                                        "User not found"));
 
-                        // Generate access JWT
                         String accessToken = jwtService.generateAccessToken(user);
 
-                        // Generate and store refresh token in Redis
                         String refreshToken = refreshTokenService.createRefreshToken(
                                         user.getUserId());
 
@@ -166,23 +136,16 @@ public class AuthService {
 
                 } catch (DisabledException e) {
 
-                        /*
-                         * User exists but is disabled.
-                         * In the current design this means
-                         * the email has not been verified.
-                         */
-                        User user = userRepository.findByEmail(
-                                        request.getEmail())
-                                        .orElseThrow(() -> new UserNotFoundException("User not found"));
+                        User user = userRepository
+                                        .findByEmail(request.getEmail())
+                                        .orElseThrow(() -> new UserNotFoundException(
+                                                        "User not found"));
 
                         LocalDateTime expiry = user.getEmailVerificationTokenExpiry();
 
-                        /*
-                         * Verification token is still valid.
-                         * Don't send another email.
-                         */
                         LocalDateTime now = LocalDateTime.now();
 
+                        // Verification link is still valid
                         if (expiry != null &&
                                         expiry.isAfter(now.plusMinutes(3))) {
 
@@ -190,33 +153,15 @@ public class AuthService {
                                                 "Please verify your email before logging in");
                         }
 
-                        /*
-                         * Token expired or missing.
-                         * Generate a new token and send email.
-                         */
-                        try {
+                        // Token expired or missing
+                        // Generate a new token and send email asynchronously
+                        emailVerificationService.sendVerificationEmail(user);
 
-                                emailVerificationService.sendVerificationEmail(
-                                                user);
-
-                        } catch (MessagingException mailException) {
-
-                                throw new EmailSendingException(
-                                                "Failed to send verification email",
-                                                mailException);
-                        }
-
-                        /*
-                         * A new verification email was successfully sent.
-                         * This is currently represented as an exception
-                         * because LoginResponse cannot represent this outcome.
-                         */
                         throw new EmailVerificationRequiredException(
                                         "Your verification link expired. "
                                                         + "A new verification email has been sent.");
                 }
         }
-
         // =========================================================
         // 3. REFRESH
         // =========================================================
