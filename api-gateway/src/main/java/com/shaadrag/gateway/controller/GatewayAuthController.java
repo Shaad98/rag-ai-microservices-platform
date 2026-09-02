@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.Duration;
 import java.util.Map;
 
-@RestController
+ @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
 public class GatewayAuthController {
