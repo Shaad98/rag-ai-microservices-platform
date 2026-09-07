@@ -24,10 +24,12 @@ import lombok.Setter;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    private  String identitySvcName;
-    private  String gatewaySvcName;
-    private  String identitySvcPassword;
-    private  String gatewaySvcPassword;
+    private String identitySvcName;
+    private String gatewaySvcName;
+    private String identitySvcPassword;
+    private String gatewaySvcPassword;
+    private String documentSvcName;
+    private String documentSvcPassword;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -39,9 +41,8 @@ public class SecurityConfig {
                 .build();
     }
 
-
     @Bean
-    public PasswordEncoder passwordEncoder(){
+    public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
@@ -55,7 +56,11 @@ public class SecurityConfig {
                 .password(passwordEncoder().encode(gatewaySvcPassword))
                 .build();
 
-        return new InMemoryUserDetailsManager(identity, gateway);
+        UserDetails document = User.withUsername(documentSvcName)
+                .password(passwordEncoder().encode(documentSvcPassword))
+                .build();
+
+        return new InMemoryUserDetailsManager(identity, gateway, document);
     }
 
 }

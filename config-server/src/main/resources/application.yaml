@@ -19,6 +19,8 @@ spring:
       identity-svc-password: ${IDENTITY_SVC_PASSWORD}
       gateway-svc-name: ${GATEWAY_SVC_NAME}
       gateway-svc-password: ${GATEWAY_SVC_PASSWORD}
+      document-svc-name: ${DOCUMENT_SVC_NAME}
+      document-svc-password: ${DOCUMENT_SVC_PASSWORD}
 server:
   port: ${SERVER_PORT}
 
