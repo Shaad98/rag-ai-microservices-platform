@@ -1,13 +1,12 @@
 package com.shaadrag.gateway.service;
 
-import java.security.PublicKey;
-import java.util.Date;
-
-import org.springframework.stereotype.Service;
-
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.security.PublicKey;
+import java.util.Date;
 
 @Service
 @RequiredArgsConstructor
@@ -33,23 +32,27 @@ public class JwtService {
     public String extractEmail(String token) {
 
         return extractAllClaims(token)
-                .get("email",String.class);
+                .get("email", String.class);
     }
 
     public String extractRole(String token) {
 
         return extractAllClaims(token)
-                .get("role",String.class);
+                .get("role", String.class);
     }
 
     public boolean isTokenValid(String token) {
 
         try {
 
-            Claims claims = extractAllClaims(token);
+            Claims claims =
+                    extractAllClaims(token);
 
-            return claims.getExpiration()
-                    .after(new Date());
+            Date expiration =
+                    claims.getExpiration();
+
+            return expiration != null
+                    && expiration.after(new Date());
 
         } catch (Exception e) {
 

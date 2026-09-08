@@ -1,5 +1,6 @@
 package com.shaadrag.gateway.service;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -7,26 +8,22 @@ import java.time.Duration;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class CsrfTokenService {
 
     private static final String KEY_PREFIX = "csrf:";
-    private static final Duration TTL =
-            Duration.ofDays(1);
+    private static final Duration TTL = Duration.ofDays(3);
 
     private final StringRedisTemplate redisTemplate;
-
-    public CsrfTokenService(StringRedisTemplate redisTemplate) {
-        this.redisTemplate = redisTemplate;
-    }
 
     public String create() {
 
         String token = UUID.randomUUID().toString();
 
         redisTemplate.opsForValue().set(
-            KEY_PREFIX + token,
-            "valid",
-            TTL
+                buildKey(token),
+                "valid",
+                TTL
         );
 
         return token;
@@ -39,7 +36,7 @@ public class CsrfTokenService {
         }
 
         return Boolean.TRUE.equals(
-            redisTemplate.hasKey(KEY_PREFIX + token)
+                redisTemplate.hasKey(buildKey(token))
         );
     }
 
@@ -49,6 +46,10 @@ public class CsrfTokenService {
             return;
         }
 
-        redisTemplate.delete(KEY_PREFIX + token);
+        redisTemplate.delete(buildKey(token));
+    }
+
+    private String buildKey(String token) {
+        return KEY_PREFIX + token;
     }
 }

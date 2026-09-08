@@ -7,19 +7,21 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 
 import com.shaadrag.gateway.dto.request.LoginRequest;
-import com.shaadrag.gateway.dto.response.AuthResponse;
-import com.shaadrag.gateway.dto.response.LoginResponse;
+// import com.shaadrag.gateway.dto.response.AuthResponse;
+import com.shaadrag.gateway.dto.response.IdentityLoginResponse;
+// import com.shaadrag.gateway.dto.response.LoginResponse;
+import com.shaadrag.gateway.dto.response.RefreshTokenResponse;
 
 @FeignClient(name = "${IDENTITY_SERVICE}")
 public interface IdentityClient {
 
     @PostMapping("/auth/login")
-    ResponseEntity<LoginResponse> login(
+    ResponseEntity<IdentityLoginResponse> login(
             @RequestBody LoginRequest request
     );
 
     @PostMapping("/auth/refresh")
-    ResponseEntity<AuthResponse> refresh(
+    ResponseEntity<RefreshTokenResponse> refresh(
             @RequestHeader("Cookie") String refreshTokenCookie
     );
 

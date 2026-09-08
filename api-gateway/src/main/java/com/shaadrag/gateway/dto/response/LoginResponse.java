@@ -15,6 +15,6 @@ package com.shaadrag.gateway.dto.response;
 
 
 public record LoginResponse(
-        String accessToken,
-        String refreshToken
+        String accessToken
+        // String refreshToken
 ) {}
