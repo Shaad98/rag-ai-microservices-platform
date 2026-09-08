@@ -2,7 +2,6 @@ package com.shaadrag.identity.service;
 
 import com.shaadrag.identity.model.User;
 import com.shaadrag.identity.repository.UserRepository;
-// import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -14,25 +13,69 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class EmailVerificationService {
 
+    private static final int VERIFICATION_VALIDITY_MINUTES = 15;
+    private static final int RESEND_THRESHOLD_MINUTES = 3;
+
     private final UserRepository userRepository;
     private final EmailService emailService;
 
     @Value("${user.frontend-url}")
     private String frontendUrl;
 
-    public void sendVerificationEmail(User user)  {
+    // =========================================================
+    // SHOULD SEND NEW EMAIL?
+    // =========================================================
+
+    public boolean shouldResendVerificationEmail(
+            User user) {
+
+        LocalDateTime expiry = user.getEmailVerificationTokenExpiry();
+
+        /*
+         * No token exists.
+         */
+        if (expiry == null) {
+            return true;
+        }
+
+        LocalDateTime threshold = LocalDateTime.now()
+                .plusMinutes(
+                        RESEND_THRESHOLD_MINUTES);
+
+        /*
+         * TRUE when:
+         *
+         * 1. token expired
+         * OR
+         * 2. token has <= 3 minutes remaining
+         */
+        return !expiry.isAfter(threshold);
+    }
+
+    // =========================================================
+    // SEND VERIFICATION EMAIL
+    // =========================================================
+
+    public void sendVerificationEmail(
+            User user) {
 
         String verificationToken = UUID.randomUUID().toString();
 
-        user.setEmailVerificationToken(verificationToken);
+        LocalDateTime expiry = LocalDateTime.now()
+                .plusMinutes(
+                        VERIFICATION_VALIDITY_MINUTES);
+
+        user.setEmailVerificationToken(
+                verificationToken);
+
         user.setEmailVerificationTokenExpiry(
-                LocalDateTime.now().plusMinutes(15)
-        );
+                expiry);
 
         userRepository.save(user);
 
-        String verificationLink =
-                frontendUrl + "/verify-email?token=" + verificationToken;
+        String verificationLink = frontendUrl
+                + "/verify-email?token="
+                + verificationToken;
 
         String html = """
                 <!DOCTYPE html>
@@ -43,16 +86,24 @@ public class EmailVerificationService {
                     background-color:#f4f4f4;
                     font-family:Arial,sans-serif;
                 ">
-                    <table width="100%%" cellpadding="0" cellspacing="0"
+
+                    <table width="100%%"
+                           cellpadding="0"
+                           cellspacing="0"
                            style="padding:40px 0;">
+
                         <tr>
                             <td align="center">
-                                <table width="600" cellpadding="0" cellspacing="0"
+
+                                <table width="600"
+                                       cellpadding="0"
+                                       cellspacing="0"
                                        style="
                                            background-color:#ffffff;
                                            border-radius:10px;
                                            padding:40px;
                                        ">
+
                                     <tr>
                                         <td align="center">
 
@@ -70,12 +121,14 @@ public class EmailVerificationService {
                                                 line-height:1.6;
                                             ">
                                                 Thanks for creating your
-                                                ShaadRAG account. Please verify
-                                                your email address to activate
-                                                your account.
+                                                ShaadRAG account.
+                                                Please verify your email
+                                                address to activate your
+                                                account.
                                             </p>
 
                                             <p style="margin:30px 0;">
+
                                                 <a href="%s"
                                                    style="
                                                        background-color:#f97316;
@@ -89,6 +142,7 @@ public class EmailVerificationService {
                                                    ">
                                                     Verify Email
                                                 </a>
+
                                             </p>
 
                                             <p style="
@@ -101,24 +155,37 @@ public class EmailVerificationService {
 
                                         </td>
                                     </tr>
+
                                 </table>
+
                             </td>
                         </tr>
+
                     </table>
+
                 </body>
                 </html>
                 """.formatted(verificationLink);
 
+        /*
+         * HTML email is async.
+         */
         emailService.sendHTMLInEmail(
                 user.getEmail(),
                 "Verify Your ShaadRAG Email",
-                html
-        );
+                html);
     }
 
-    public boolean verifyEmail(String token) {
+    // =========================================================
+    // VERIFY EMAIL
+    // =========================================================
 
-        if (token == null || token.isBlank()) {
+    public boolean verifyEmail(
+            String token) {
+
+        if (token == null
+                || token.isBlank()) {
+
             return false;
         }
 
@@ -130,14 +197,21 @@ public class EmailVerificationService {
             return false;
         }
 
-        if (user.getEmailVerificationTokenExpiry() == null ||
-                user.getEmailVerificationTokenExpiry()
-                        .isBefore(LocalDateTime.now())) {
+        LocalDateTime expiry = user.getEmailVerificationTokenExpiry();
+
+        if (expiry == null
+                || expiry.isBefore(LocalDateTime.now())) {
+
             return false;
         }
 
+        /*
+         * Email verified successfully.
+         */
         user.setIsEnabled(true);
+
         user.setEmailVerificationToken(null);
+
         user.setEmailVerificationTokenExpiry(null);
 
         userRepository.save(user);

@@ -6,9 +6,7 @@ import com.shaadrag.identity.dto.response.LoginResponse;
 import com.shaadrag.identity.dto.response.RefreshTokenResponse;
 import com.shaadrag.identity.dto.response.RegisterResponse;
 import com.shaadrag.identity.service.AuthService;
-
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,9 +18,8 @@ public class AuthController {
 
     private final AuthService authService;
 
-
     // =========================================================
-    // 1. REGISTER
+    // REGISTER
     // =========================================================
 
     @PostMapping("/register")
@@ -37,9 +34,8 @@ public class AuthController {
                 .body(response);
     }
 
-
     // =========================================================
-    // 2. LOGIN
+    // LOGIN
     // =========================================================
 
     @PostMapping("/login")
@@ -52,9 +48,8 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-
     // =========================================================
-    // 3. REFRESH
+    // REFRESH
     // =========================================================
 
     @PostMapping("/refresh")
@@ -62,22 +57,34 @@ public class AuthController {
             @RequestHeader("Cookie") String refreshTokenCookie) {
 
         RefreshTokenResponse response =
-                authService.refresh(refreshTokenCookie);
+                authService.refresh(
+                        refreshTokenCookie
+                );
 
         return ResponseEntity.ok(response);
     }
 
-
     // =========================================================
-    // 4. LOGOUT
+    // LOGOUT
     // =========================================================
 
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(
-            @RequestHeader("Cookie") String refreshTokenCookie) {
+            @RequestHeader(
+                    value = "Cookie",
+                    required = false
+            )
+            String refreshTokenCookie) {
 
-        authService.logout(refreshTokenCookie);
+        authService.logout(
+                refreshTokenCookie
+        );
 
+        /*
+         * Logout is idempotent.
+         *
+         * Missing refresh token is still a successful logout.
+         */
         return ResponseEntity.noContent().build();
     }
 }

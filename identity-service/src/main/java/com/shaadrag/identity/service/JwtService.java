@@ -1,62 +1,76 @@
 package com.shaadrag.identity.service;
 
+import com.shaadrag.identity.model.User;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import lombok.AllArgsConstructor;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Service;
+
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.Date;
 
-
-// import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.stereotype.Service;
-
-import com.shaadrag.identity.model.User;
-
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import lombok.AllArgsConstructor;
-
-@AllArgsConstructor
-
 @Service
+@AllArgsConstructor
 public class JwtService {
 
     private final PrivateKey privateKey;
     private final PublicKey publicKey;
 
+    private static final long ACCESS_TOKEN_EXPIRATION =
+            10 * 60 * 1000L;
 
+    // =========================================================
+    // GENERATE ACCESS TOKEN
+    // =========================================================
 
-    private final long accessTokenExpiration = 10 * 60 * 1000;
+    public String generateAccessToken(
+            UserDetails userDetails) {
 
-  
-    public String generateAccessToken(UserDetails userDetails) {
-
-        User user = (User) userDetails;
+        User user =
+                (User) userDetails;
 
         return Jwts.builder()
-                .subject(user.getUserId())
-                .claim("email", user.getEmail())
-                .claim("role", user.getRole().name())
-                .issuedAt(new Date())
+
+                .subject(
+                        user.getUserId()
+                )
+
+                .claim(
+                        "email",
+                        user.getEmail()
+                )
+
+                .claim(
+                        "role",
+                        user.getRole().name()
+                )
+
+                .issuedAt(
+                        new Date()
+                )
+
                 .expiration(
                         new Date(
                                 System.currentTimeMillis()
-                                        + this.accessTokenExpiration))
-                .signWith(privateKey)
+                                        + ACCESS_TOKEN_EXPIRATION
+                        )
+                )
+
+                .signWith(
+                        privateKey
+                )
+
                 .compact();
     }
 
-    public String extractUserId(String token) {
+    // =========================================================
+    // EXTRACT CLAIMS
+    // =========================================================
 
-        return extractAllClaims(token)
-                .getSubject();
-    }
-
-    public String extractEmail(String token) {
-        return extractAllClaims(token)
-                .get("email", String.class);
-    }
-
-    public Claims extractAllClaims(String token) {
+    public Claims extractAllClaims(
+            String token) {
 
         return Jwts.parser()
                 .verifyWith(publicKey)
@@ -65,50 +79,65 @@ public class JwtService {
                 .getPayload();
     }
 
-    // public boolean isTokenValid(
-    // String token,
-    // UserDetails userDetails) {
+    public String extractUserId(
+            String token) {
 
-    // try {
+        return extractAllClaims(token)
+                .getSubject();
+    }
 
-    // String username = extractEmail(token);
+    public String extractEmail(
+            String token) {
 
-    // return username.equals(
-    // userDetails.getUsername())
-    // && !isTokenExpired(token);
+        return extractAllClaims(token)
+                .get(
+                        "email",
+                        String.class
+                );
+    }
 
-    // } catch (Exception e) {
+    // =========================================================
+    // VALIDATION
+    // =========================================================
 
-    // return false;
-    // }
-    // }
-    
     public boolean isTokenValid(
             String token,
             UserDetails userDetails) {
 
         try {
-            User user = (User) userDetails;
 
-            String userId = extractUserId(token);
-            String email = extractEmail(token);
+            User user =
+                    (User) userDetails;
 
-            return userId.equals(user.getUserId())
-                    && email.equals(user.getEmail())
+            String userId =
+                    extractUserId(token);
+
+            String email =
+                    extractEmail(token);
+
+            return userId.equals(
+                        user.getUserId()
+                    )
+                    && email.equals(
+                        user.getEmail()
+                    )
                     && !isTokenExpired(token);
 
         } catch (Exception e) {
+
             return false;
         }
     }
 
-    private boolean isTokenExpired(String token) {
+    private boolean isTokenExpired(
+            String token) {
 
         return extractExpiration(token)
                 .before(new Date());
     }
 
-    private Date extractExpiration(String token) {
+    private Date extractExpiration(
+            String token) {
 
         return extractAllClaims(token)
                 .getExpiration();

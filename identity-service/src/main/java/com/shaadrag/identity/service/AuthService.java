@@ -5,25 +5,22 @@ import com.shaadrag.identity.dto.request.RegisterRequest;
 import com.shaadrag.identity.dto.response.LoginResponse;
 import com.shaadrag.identity.dto.response.RefreshTokenResponse;
 import com.shaadrag.identity.dto.response.RegisterResponse;
-// import com.shaadrag.identity.exception.EmailSendingException;
 import com.shaadrag.identity.exception.EmailVerificationRequiredException;
+import com.shaadrag.identity.exception.InvalidRefreshTokenException;
 import com.shaadrag.identity.exception.UserAlreadyExistsException;
+import com.shaadrag.identity.exception.UserDisabledException;
 import com.shaadrag.identity.exception.UserNotFoundException;
 import com.shaadrag.identity.model.RefreshTokenData;
 import com.shaadrag.identity.model.Role;
 import com.shaadrag.identity.model.User;
 import com.shaadrag.identity.repository.UserRepository;
-// import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-// import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -36,97 +33,136 @@ public class AuthService {
         private final RefreshTokenService refreshTokenService;
         private final UserService userService;
         private final EmailVerificationService emailVerificationService;
-        // private final PasswordEncoder passwordEncoder;
+
         // =========================================================
-        // 1. REGISTER
+        // REGISTER
         // =========================================================
 
-        public RegisterResponse register(RegisterRequest request) {
+        public RegisterResponse register(
+                        RegisterRequest request) {
+
+                String email = request.getEmail()
+                                .trim()
+                                .toLowerCase();
 
                 User existingUser = userRepository
-                                .findByEmail(request.getEmail())
+                                .findByEmail(email)
                                 .orElse(null);
 
-                // Already registered and verified
-                if (existingUser != null && existingUser.isEnabled()) {
+                /*
+                 * User already registered and verified.
+                 */
+                if (existingUser != null
+                                && existingUser.isEnabled()) {
 
                         throw new UserAlreadyExistsException(
                                         "An account with this email already exists");
                 }
 
-                // Already registered but not verified
+                /*
+                 * User exists but email is not verified.
+                 */
                 if (existingUser != null) {
 
-                        LocalDateTime expiry = existingUser.getEmailVerificationTokenExpiry();
-
-                        LocalDateTime now = LocalDateTime.now();
-
-                        // Existing verification token is still valid
-                        if (expiry != null &&
-                                        expiry.isAfter(now.plusMinutes(3))) {
+                        /*
+                         * Verification token still has more than
+                         * 3 minutes remaining.
+                         *
+                         * DO NOT SEND ANOTHER EMAIL.
+                         */
+                        if (!emailVerificationService
+                                        .shouldResendVerificationEmail(existingUser)) {
 
                                 throw new EmailVerificationRequiredException(
                                                 "Please verify your email before registering again");
                         }
 
-                        // Token expired or missing
-                        // Generate new token and send email asynchronously
-                        emailVerificationService.sendVerificationEmail(
-                                        existingUser);
+                        /*
+                         * Expired or <= 3 minutes remaining.
+                         *
+                         * Generate a fresh token and send new email.
+                         */
+                        emailVerificationService
+                                        .sendVerificationEmail(existingUser);
 
                         return new RegisterResponse(
-                                        "Your verification link expired. "
+                                        "Your verification link is close to expiry or expired. "
                                                         + "A new verification email has been sent.");
                 }
 
-                // New user
+                // =====================================================
+                // NEW USER
+                // =====================================================
+
                 User user = new User();
 
-                user.setFullName(request.getFullName());
-                user.setEmail(request.getEmail());
-                user.setPassword(request.getPassword());
-                user.setDateOfBirth(request.getDateOfBirth());
+                user.setFullName(
+                                request.getFullName());
+
+                user.setEmail(email);
+
+                user.setPassword(
+                                request.getPassword());
+
+                user.setDateOfBirth(
+                                request.getDateOfBirth());
+
                 user.setRole(Role.MEMBER);
 
-                // User must verify email
+                /*
+                 * User is disabled until email verification.
+                 */
                 user.setIsEnabled(false);
 
                 /*
-                 * UserService:
-                 * - encodes password
-                 * - saves user
+                 * UserService handles password encoding
+                 * and database save.
                  */
                 User savedUser = userService.saveUser(user);
 
-                // Send verification email asynchronously
-                emailVerificationService.sendVerificationEmail(
-                                savedUser);
+                /*
+                 * Create verification token and
+                 * send verification email.
+                 */
+                emailVerificationService
+                                .sendVerificationEmail(savedUser);
 
                 return new RegisterResponse(
                                 "Registration successful. Please verify your email.");
         }
+
         // =========================================================
-        // 2. LOGIN
+        // LOGIN
         // =========================================================
 
-        public LoginResponse login(LoginRequest request) {
+        public LoginResponse login(
+                        LoginRequest request) {
 
                 try {
 
                         Authentication authentication = authenticationManager.authenticate(
                                         new UsernamePasswordAuthenticationToken(
-                                                        request.getEmail(),
+                                                        request.getEmail()
+                                                                        .trim()
+                                                                        .toLowerCase(),
                                                         request.getPassword()));
 
                         String email = authentication.getName();
 
                         User user = userRepository
                                         .findByEmail(email)
-                                        .orElseThrow(() -> new UserNotFoundException(
-                                                        "User not found"));
+                                        .orElseThrow(
+                                                        () -> new UserNotFoundException(
+                                                                        "User not found"));
 
+                        /*
+                         * Generate access token.
+                         */
                         String accessToken = jwtService.generateAccessToken(user);
 
+                        /*
+                         * Generate refresh token in Redis.
+                         */
                         String refreshToken = refreshTokenService.createRefreshToken(
                                         user.getUserId());
 
@@ -134,36 +170,49 @@ public class AuthService {
                                         accessToken,
                                         refreshToken);
 
-                } catch (DisabledException e) {
+                } catch (DisabledException ex) {
 
+                        /*
+                         * User is disabled.
+                         *
+                         * In your design this means
+                         * email verification is incomplete.
+                         */
                         User user = userRepository
-                                        .findByEmail(request.getEmail())
-                                        .orElseThrow(() -> new UserNotFoundException(
-                                                        "User not found"));
+                                        .findByEmail(
+                                                        request.getEmail()
+                                                                        .trim()
+                                                                        .toLowerCase())
+                                        .orElseThrow(
+                                                        () -> new UserNotFoundException(
+                                                                        "User not found"));
 
-                        LocalDateTime expiry = user.getEmailVerificationTokenExpiry();
-
-                        LocalDateTime now = LocalDateTime.now();
-
-                        // Verification link is still valid
-                        if (expiry != null &&
-                                        expiry.isAfter(now.plusMinutes(3))) {
+                        /*
+                         * More than 3 minutes remaining:
+                         * DON'T send another email.
+                         */
+                        if (!emailVerificationService
+                                        .shouldResendVerificationEmail(user)) {
 
                                 throw new EmailVerificationRequiredException(
                                                 "Please verify your email before logging in");
                         }
 
-                        // Token expired or missing
-                        // Generate a new token and send email asynchronously
-                        emailVerificationService.sendVerificationEmail(user);
+                        /*
+                         * Expired / <= 3 minutes:
+                         * send a new verification email.
+                         */
+                        emailVerificationService
+                                        .sendVerificationEmail(user);
 
                         throw new EmailVerificationRequiredException(
-                                        "Your verification link expired. "
+                                        "Your verification link expired or is close to expiry. "
                                                         + "A new verification email has been sent.");
                 }
         }
+
         // =========================================================
-        // 3. REFRESH
+        // REFRESH
         // =========================================================
 
         public RefreshTokenResponse refresh(
@@ -173,42 +222,48 @@ public class AuthService {
 
                 if (refreshToken == null) {
 
-                        throw new IllegalArgumentException(
-                                        "Refresh token missing");
+                        throw new InvalidRefreshTokenException(
+                                        "Refresh token is missing");
                 }
 
-                // Check refresh token in Redis
-                RefreshTokenData tokenData = refreshTokenService.validateRefreshToken(
-                                refreshToken);
+                /*
+                 * Check Redis.
+                 */
+                RefreshTokenData tokenData = refreshTokenService
+                                .validateRefreshToken(refreshToken);
 
                 if (tokenData == null) {
 
-                        throw new IllegalArgumentException(
-                                        "Invalid or expired refresh token");
+                        throw new InvalidRefreshTokenException(
+                                        "Refresh token is invalid or expired");
                 }
 
-                // Get userId from Redis
                 String userId = tokenData.getUserId();
 
-                // Get user from database
-                User user = userRepository.findById(userId)
-                                .orElseThrow(() -> new UserNotFoundException(
-                                                "User not found"));
+                /*
+                 * Check user still exists.
+                 */
+                User user = userRepository
+                                .findById(userId)
+                                .orElseThrow(
+                                                () -> new UserNotFoundException(
+                                                                "User not found"));
 
                 /*
                  * User could have been disabled after login.
-                 * Don't allow refresh in that case.
                  */
                 if (!user.isEnabled()) {
 
-                        refreshTokenService.deleteRefreshToken(
-                                        refreshToken);
+                        refreshTokenService
+                                        .deleteRefreshToken(refreshToken);
 
-                        throw new IllegalStateException(
+                        throw new UserDisabledException(
                                         "User account is disabled");
                 }
 
-                // Generate a new access token
+                /*
+                 * Generate a new access token.
+                 */
                 String accessToken = jwtService.generateAccessToken(user);
 
                 return new RefreshTokenResponse(
@@ -216,20 +271,25 @@ public class AuthService {
         }
 
         // =========================================================
-        // 4. LOGOUT
+        // LOGOUT
         // =========================================================
 
-        public void logout(String refreshTokenCookie) {
+        public void logout(
+                        String refreshTokenCookie) {
 
                 String refreshToken = extractRefreshToken(refreshTokenCookie);
 
+                /*
+                 * Logout is idempotent.
+                 *
+                 * Missing refresh token is NOT an error.
+                 */
                 if (refreshToken == null) {
                         return;
                 }
 
-                // Remove refresh token from Redis
-                refreshTokenService.deleteRefreshToken(
-                                refreshToken);
+                refreshTokenService
+                                .deleteRefreshToken(refreshToken);
         }
 
         // =========================================================
@@ -239,8 +299,8 @@ public class AuthService {
         private String extractRefreshToken(
                         String cookieHeader) {
 
-                if (cookieHeader == null ||
-                                cookieHeader.isBlank()) {
+                if (cookieHeader == null
+                                || cookieHeader.isBlank()) {
 
                         return null;
                 }
@@ -249,10 +309,12 @@ public class AuthService {
 
                 for (String cookie : cookies) {
 
-                        String[] parts = cookie.trim().split("=", 2);
+                        String[] parts = cookie.trim()
+                                        .split("=", 2);
 
-                        if (parts.length == 2 &&
-                                        "refresh_token".equals(parts[0])) {
+                        if (parts.length == 2
+                                        && "refresh_token"
+                                                        .equals(parts[0])) {
 
                                 return parts[1];
                         }
