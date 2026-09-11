@@ -1,5 +1,6 @@
 package com.shaadrag.gateway.service;
 
+import com.shaadrag.gateway.security.JwtAuthenticationException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import lombok.RequiredArgsConstructor;
@@ -23,40 +24,51 @@ public class JwtService {
                 .getPayload();
     }
 
-    public String extractUserId(String token) {
+    public String extractUserId(Claims claims) {
 
-        return extractAllClaims(token)
-                .getSubject();
+        return claims.getSubject();
     }
 
-    public String extractEmail(String token) {
+    public String extractEmail(Claims claims) {
 
-        return extractAllClaims(token)
-                .get("email", String.class);
+        return claims.get("email", String.class);
     }
 
-    public String extractRole(String token) {
+    public String extractRole(Claims claims) {
 
-        return extractAllClaims(token)
-                .get("role", String.class);
+        return claims.get("role", String.class);
     }
 
-    public boolean isTokenValid(String token) {
+    public void validateClaims(Claims claims) {
 
-        try {
+        Date expiration = claims.getExpiration();
 
-            Claims claims =
-                    extractAllClaims(token);
+        if (expiration == null) {
+            throw new JwtAuthenticationException(
+                    "JWT expiration is missing"
+            );
+        }
 
-            Date expiration =
-                    claims.getExpiration();
+        if (expiration.before(new Date())) {
+            throw new JwtAuthenticationException(
+                    "JWT token has expired"
+            );
+        }
 
-            return expiration != null
-                    && expiration.after(new Date());
+        String userId = claims.getSubject();
 
-        } catch (Exception e) {
+        if (userId == null || userId.isBlank()) {
+            throw new JwtAuthenticationException(
+                    "JWT user ID is missing"
+            );
+        }
 
-            return false;
+        String role = extractRole(claims);
+
+        if (role == null || role.isBlank()) {
+            throw new JwtAuthenticationException(
+                    "JWT role is missing"
+            );
         }
     }
 }

@@ -14,35 +14,53 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class JwtConfig {
 
-    private final String PATH  = "/home/shaad/shaadrag.online/rag-ai-microservices-platform/api-gateway/src/main/resources/keys";
+        private final String PATH = "/home/shaad/shaadrag.online/rag-ai-microservices-platform/api-gateway/src/main/resources/keys";
 
-    @Bean
-    public PublicKey jwtPublicKey() throws Exception {
+        @Bean
+        public PublicKey jwtPublicKey() throws Exception {
 
-        String path = PATH + "/public.pem";
+                String path = PATH + "/public.pem";
 
-        String publicKey = readKey(
-                new FileInputStream(path));
+                String publicKey = readKey(
+                                new FileInputStream(path));
 
-        String key = publicKey
-                .replace("-----BEGIN PUBLIC KEY-----", "")
-                .replace("-----END PUBLIC KEY-----", "")
-                .replaceAll("\\s+", "");
+                String key = publicKey
+                                .replace("-----BEGIN PUBLIC KEY-----", "")
+                                .replace("-----END PUBLIC KEY-----", "")
+                                .replaceAll("\\s+", "");
 
-        byte[] keyBytes = Base64.getDecoder().decode(key);
+                byte[] keyBytes = Base64.getDecoder().decode(key);
 
-        X509EncodedKeySpec keySpec = new X509EncodedKeySpec(keyBytes);
+                X509EncodedKeySpec keySpec = new X509EncodedKeySpec(keyBytes);
 
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+                KeyFactory keyFactory = KeyFactory.getInstance("RSA");
 
-        return keyFactory.generatePublic(keySpec);
-    }
+                return keyFactory.generatePublic(keySpec);
+        }
 
-    private String readKey(InputStream inputStream)
-            throws Exception {
+        private String readKey(InputStream inputStream)
+        throws Exception {
 
         return new String(
-                inputStream.readAllBytes(),
-                StandardCharsets.UTF_8);
-    }
+        inputStream.readAllBytes(),
+        StandardCharsets.UTF_8);
+        }
+
+        // private String readPublicKey() throws Exception {
+
+        //         try (InputStream inputStream = getClass()
+        //                         .getClassLoader()
+        //                         .getResourceAsStream(
+        //                                         "keys/public.pem")) {
+
+        //                 if (inputStream == null) {
+        //                         throw new IllegalStateException(
+        //                                         "public.pem not found in resources/keys");
+        //                 }
+
+        //                 return new String(
+        //                                 inputStream.readAllBytes(),
+        //                                 StandardCharsets.UTF_8);
+        //         }
+        // }
 }
