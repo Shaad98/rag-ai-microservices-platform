@@ -53,20 +53,30 @@ public class UserService {
     @Cacheable(value = "users", key = "#userId")
     public UserResponse getUser(String userId) {
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        // User user = userRepository.findById(userId)
+        //         .orElseThrow(() -> new RuntimeException("User not found"));
 
-        return toUserResponse(user);
+        // return toUserResponse(user);
+
+        UserResponse userResponse = userRepository.findUserResponseById(userId)
+                    .orElseThrow(()->new RuntimeException("User not found"));
+        
+        return userResponse;
     }
 
     @Transactional(readOnly = true)
     @Cacheable(value = "usersByEmail", key = "#email")
     public UserResponse getUserByEmail(String email) {
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        // User user = userRepository.findByEmail(email)
+        //         .orElseThrow(() -> new RuntimeException("User not found"));
 
-        return getUser(user.getUserId());
+        // return getUser(user.getUserId());
+
+        UserResponse userResponse = userRepository.findUserResponseByEmail(email)
+                    .orElseThrow(()->new RuntimeException("User not found"));
+        
+        return userResponse;
     }
 
     @CachePut(value = "usersByEmail", key = "#email")
