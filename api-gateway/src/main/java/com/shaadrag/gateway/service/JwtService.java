@@ -2,6 +2,7 @@ package com.shaadrag.gateway.service;
 
 import com.shaadrag.gateway.security.JwtAuthenticationException;
 import io.jsonwebtoken.Claims;
+// import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,11 @@ public class JwtService {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+
+        // ExpiredJwtException
+        // MalformedJwtException
+        // SignatureException
+        // UnsupportedJwtException
     }
 
     public String extractUserId(Claims claims) {
@@ -45,30 +51,26 @@ public class JwtService {
 
         if (expiration == null) {
             throw new JwtAuthenticationException(
-                    "JWT expiration is missing"
-            );
+                    "JWT expiration is missing");
         }
 
         if (expiration.before(new Date())) {
             throw new JwtAuthenticationException(
-                    "JWT token has expired"
-            );
+                    "JWT token has expired");
         }
 
         String userId = claims.getSubject();
 
         if (userId == null || userId.isBlank()) {
             throw new JwtAuthenticationException(
-                    "JWT user ID is missing"
-            );
+                    "JWT user ID is missing");
         }
 
         String role = extractRole(claims);
 
         if (role == null || role.isBlank()) {
             throw new JwtAuthenticationException(
-                    "JWT role is missing"
-            );
+                    "JWT role is missing");
         }
     }
 }

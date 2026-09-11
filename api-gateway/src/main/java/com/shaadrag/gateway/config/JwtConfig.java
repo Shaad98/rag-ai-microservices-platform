@@ -39,28 +39,28 @@ public class JwtConfig {
         }
 
         private String readKey(InputStream inputStream)
-        throws Exception {
+                        throws Exception {
 
-        return new String(
-        inputStream.readAllBytes(),
-        StandardCharsets.UTF_8);
+                return new String(
+                                inputStream.readAllBytes(),
+                                StandardCharsets.UTF_8);
         }
 
         // private String readPublicKey() throws Exception {
 
-        //         try (InputStream inputStream = getClass()
-        //                         .getClassLoader()
-        //                         .getResourceAsStream(
-        //                                         "keys/public.pem")) {
+        // try (InputStream inputStream = getClass()
+        // .getClassLoader()
+        // .getResourceAsStream(
+        // "keys/public.pem")) {
 
-        //                 if (inputStream == null) {
-        //                         throw new IllegalStateException(
-        //                                         "public.pem not found in resources/keys");
-        //                 }
+        // if (inputStream == null) {
+        // throw new IllegalStateException(
+        // "public.pem not found in resources/keys");
+        // }
 
-        //                 return new String(
-        //                                 inputStream.readAllBytes(),
-        //                                 StandardCharsets.UTF_8);
-        //         }
+        // return new String(
+        // inputStream.readAllBytes(),
+        // StandardCharsets.UTF_8);
+        // }
         // }
 }
