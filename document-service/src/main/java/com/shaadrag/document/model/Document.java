@@ -36,6 +36,8 @@ public class Document {
 
     private String documentHostedUrl;
 
+    private String applicationUrl;
+
     @Enumerated(EnumType.STRING)
     private DocumentType documentType;
 
@@ -56,5 +58,5 @@ public class Document {
         uploadedAt = LocalDateTime.now();
 
     }
-    
+
 }
