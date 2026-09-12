@@ -1,3 +1,27 @@
+server:
+  port: 8082
+
 spring:
   application:
     name: document-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/shaadrag
+    username: postgres
+    password: password
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+aws:
+  s3:
+    bucket-name: ${AWS_S3_BUCKET_NAME}
+    region: ${AWS_S3_REGION:us-east-1}
+    access-key: ${AWS_ACCESS_KEY_ID}
+    secret-key: ${AWS_SECRET_ACCESS_KEY}  
+
+app:
+  document:
+    application-url: ${DOCUMENT_APPLICATION_URL:https://shaadrag.online/documents}
