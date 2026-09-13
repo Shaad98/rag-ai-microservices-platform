@@ -1,19 +1,26 @@
-server:
-  port: 8082
-
 spring:
   application:
-    name: document-service
+    name: ${SERVICE_NAME}
 
-  datasource:
-    url: jdbc:postgresql://localhost:5432/shaadrag
-    username: postgres
-    password: password
+  # datasource:
+  #   url: ${DB_URL}
+  #   username: postgres
+  #   password: root
+  #   driver-class-name: org.postgresql.Driver
+  
+  # jpa:
+  #   hibernate:
+  #     ddl-auto: update
+  #   database-platform: ${HIBERNATE_DIALECT}
 
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
+  # data:
+  #   redis:
+  #     host: ${REDIS_HOST}
+  #     port: ${REDIS_PORT:6379}
+      # password: ${REDIS_PASSWORD:}
+    
+  config:
+    import: configserver:${IDENTITY_CONFIG_URL}
 
 aws:
   s3:
