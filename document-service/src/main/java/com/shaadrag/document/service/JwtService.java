@@ -1,14 +1,16 @@
 package com.shaadrag.document.service;
 
-
-import java.security.PublicKey;
-import java.util.Date;
-
-import org.springframework.stereotype.Service;
+import com.shaadrag.document.security.JwtAuthenticationException;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.stereotype.Service;
+
+import java.security.PublicKey;
+import java.util.Date;
 
 @Service
 @RequiredArgsConstructor
@@ -16,7 +18,9 @@ public class JwtService {
 
     private final PublicKey publicKey;
 
-    public Claims extractAllClaims(String token) {
+    public Claims extractAllClaims(
+            String token
+    ) {
 
         return Jwts.parser()
                 .verifyWith(publicKey)
@@ -25,36 +29,74 @@ public class JwtService {
                 .getPayload();
     }
 
-    public String extractUserId(String token) {
+    public String extractUserId(
+            Claims claims
+    ) {
 
-        return extractAllClaims(token)
-                .getSubject();
+        return claims.getSubject();
     }
 
-    public String extractEmail(String token) {
+    public String extractEmail(
+            Claims claims
+    ) {
 
-        return extractAllClaims(token)
-                .get("email",String.class);
+        return claims.get(
+                "email",
+                String.class
+        );
     }
 
-    public String extractRole(String token) {
+    public String extractRole(
+            Claims claims
+    ) {
 
-        return extractAllClaims(token)
-                .get("role",String.class);
+        return claims.get(
+                "role",
+                String.class
+        );
     }
 
-    public boolean isTokenValid(String token) {
+    public void validateClaims(
+            Claims claims
+    ) {
 
-        try {
+        Date expiration =
+                claims.getExpiration();
 
-            Claims claims = extractAllClaims(token);
+        if (expiration == null) {
 
-            return claims.getExpiration()
-                    .after(new Date());
+            throw new JwtAuthenticationException(
+                    "JWT expiration is missing"
+            );
+        }
 
-        } catch (Exception e) {
+        if (expiration.before(new Date())) {
 
-            return false;
+            throw new JwtAuthenticationException(
+                    "JWT token has expired"
+            );
+        }
+
+        String userId =
+                claims.getSubject();
+
+        if (userId == null ||
+                userId.isBlank()) {
+
+            throw new JwtAuthenticationException(
+                    "JWT user ID is missing"
+            );
+        }
+
+        String role =
+                extractRole(claims);
+
+        if (role == null ||
+                role.isBlank()) {
+
+            throw new JwtAuthenticationException(
+                    "JWT role is missing"
+            );
         }
     }
 }
