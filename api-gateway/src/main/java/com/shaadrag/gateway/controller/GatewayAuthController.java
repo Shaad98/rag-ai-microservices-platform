@@ -1,10 +1,18 @@
 package com.shaadrag.gateway.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import com.shaadrag.gateway.client.IdentityClient;
+
 import com.shaadrag.gateway.dto.request.LoginRequest;
+
+import com.shaadrag.gateway.dto.response.ErrorResponse;
 import com.shaadrag.gateway.dto.response.IdentityLoginResponse;
 import com.shaadrag.gateway.dto.response.LoginResponse;
 import com.shaadrag.gateway.dto.response.RefreshTokenResponse;
+
+// import com.shaadrag.gateway.handler.ErrorResponseWriter;
+
 import com.shaadrag.gateway.service.CsrfTokenService;
 
 import feign.FeignException;
@@ -23,7 +31,9 @@ import org.springframework.http.ResponseEntity;
 
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 
 @RestController
@@ -32,14 +42,22 @@ import java.util.Map;
 public class GatewayAuthController {
 
     private static final String CSRF_COOKIE = "XSRF-TOKEN";
+
     private static final String CSRF_HEADER = "X-XSRF-TOKEN";
+
     private static final String REFRESH_COOKIE = "refresh_token";
 
-    private static final Duration CSRF_TTL = Duration.ofDays(3);
-    private static final Duration REFRESH_TTL = Duration.ofDays(1);
+    private static final Duration CSRF_TTL =
+            Duration.ofDays(3);
+
+    private static final Duration REFRESH_TTL =
+            Duration.ofDays(1);
 
     private final CsrfTokenService csrfTokenService;
+
     private final IdentityClient identityClient;
+
+    private final ObjectMapper objectMapper;
 
     // =========================================================
     // 1. GET CSRF
@@ -48,15 +66,20 @@ public class GatewayAuthController {
     @GetMapping("/csrf")
     public ResponseEntity<Map<String, String>> csrf(
             HttpServletRequest request,
-            HttpServletResponse response) {
+            HttpServletResponse response
+    ) {
 
-        String csrfToken = ensureCsrfToken(
-                request,
-                response
-        );
+        String csrfToken =
+                ensureCsrfToken(
+                        request,
+                        response
+                );
 
         return ResponseEntity.ok(
-                Map.of("token", csrfToken)
+                Map.of(
+                        "token",
+                        csrfToken
+                )
         );
     }
 
@@ -68,15 +91,17 @@ public class GatewayAuthController {
     public ResponseEntity<?> login(
             @RequestBody LoginRequest request,
             HttpServletRequest httpRequest,
-            HttpServletResponse httpResponse) {
+            HttpServletResponse httpResponse
+    ) {
 
         /*
-         * Login does not strictly need CSRF protection because
+         * Login does not strictly require CSRF protection because
          * credentials are explicitly supplied by the frontend.
          *
          * We still establish the CSRF token so the browser is
          * ready for refresh/logout.
          */
+
         ensureCsrfToken(
                 httpRequest,
                 httpResponse
@@ -84,12 +109,14 @@ public class GatewayAuthController {
 
         try {
 
-            ResponseEntity<IdentityLoginResponse> identityResponse =
+            ResponseEntity<IdentityLoginResponse>
+                    identityResponse =
                     identityClient.login(request);
 
             /*
              * Successful response from Identity.
              */
+
             if (identityResponse.getStatusCode().is2xxSuccessful()
                     && identityResponse.getBody() != null) {
 
@@ -101,6 +128,7 @@ public class GatewayAuthController {
                  *
                  * Store it only inside HttpOnly cookie.
                  */
+
                 addCookie(
                         httpResponse,
                         REFRESH_COOKIE,
@@ -112,6 +140,7 @@ public class GatewayAuthController {
                 /*
                  * Return only access token to frontend.
                  */
+
                 return ResponseEntity.ok(
                         new LoginResponse(
                                 body.accessToken()
@@ -120,24 +149,24 @@ public class GatewayAuthController {
             }
 
             /*
-             * This normally will not be reached for Feign errors,
-             * because Feign throws FeignException for non-2xx.
+             * Normally Feign throws FeignException
+             * for non-2xx responses.
              */
+
             return ResponseEntity
-                    .status(identityResponse.getStatusCode())
-                    .body(identityResponse.getBody());
+                    .status(
+                            identityResponse.getStatusCode()
+                    )
+                    .body(
+                            identityResponse.getBody()
+                    );
 
         } catch (FeignException ex) {
 
-            /*
-             * Identity already converted its exception into a
-             * structured JSON ErrorResponse.
-             *
-             * FeignException contains that HTTP response body.
-             *
-             * We preserve it and send it to frontend.
-             */
-            return buildFeignErrorResponse(ex);
+            return buildFeignErrorResponse(
+                    ex,
+                    httpRequest
+            );
         }
     }
 
@@ -148,12 +177,14 @@ public class GatewayAuthController {
     @PostMapping("/refresh")
     public ResponseEntity<?> refresh(
             HttpServletRequest request,
-            HttpServletResponse response) {
+            HttpServletResponse response
+    ) {
 
         /*
          * Refresh is CSRF protected because the browser
          * automatically sends the HttpOnly refresh cookie.
          */
+
         if (!isCsrfValid(request)) {
 
             terminateRefreshSession(
@@ -161,9 +192,12 @@ public class GatewayAuthController {
                     response
             );
 
-            return ResponseEntity
-                    .status(HttpStatus.FORBIDDEN)
-                    .build();
+            return buildResponse(
+                    HttpStatus.FORBIDDEN,
+                    "CSRF_VALIDATION_FAILED",
+                    "Invalid CSRF token",
+                    request
+            );
         }
 
         String refreshToken =
@@ -176,6 +210,7 @@ public class GatewayAuthController {
          * No refresh token means there is no session
          * that can be refreshed.
          */
+
         if (refreshToken == null) {
 
             terminateRefreshSession(
@@ -183,36 +218,47 @@ public class GatewayAuthController {
                     response
             );
 
-            return ResponseEntity
-                    .status(HttpStatus.UNAUTHORIZED)
-                    .build();
+            return buildResponse(
+                    HttpStatus.UNAUTHORIZED,
+                    "REFRESH_TOKEN_MISSING",
+                    "Refresh token is missing",
+                    request
+            );
         }
 
         try {
 
-            ResponseEntity<RefreshTokenResponse> identityResponse =
+            ResponseEntity<RefreshTokenResponse>
+                    identityResponse =
                     identityClient.refresh(
-                            REFRESH_COOKIE + "=" + refreshToken
+                            REFRESH_COOKIE
+                                    + "="
+                                    + refreshToken
                     );
 
             /*
              * Successful refresh.
              */
+
             if (identityResponse.getStatusCode().is2xxSuccessful()) {
 
                 return ResponseEntity
-                        .status(identityResponse.getStatusCode())
-                        .body(identityResponse.getBody());
+                        .status(
+                                identityResponse.getStatusCode()
+                        )
+                        .body(
+                                identityResponse.getBody()
+                        );
             }
 
             /*
              * Normally Feign throws before reaching here.
-             *
-             * But if a non-exception response is ever returned,
-             * preserve its status/body.
              */
-            if (identityResponse.getStatusCode() == HttpStatus.UNAUTHORIZED
-                    || identityResponse.getStatusCode() == HttpStatus.FORBIDDEN) {
+
+            if (identityResponse.getStatusCode()
+                    == HttpStatus.UNAUTHORIZED
+                    || identityResponse.getStatusCode()
+                    == HttpStatus.FORBIDDEN) {
 
                 terminateRefreshSession(
                         request,
@@ -221,21 +267,25 @@ public class GatewayAuthController {
             }
 
             return ResponseEntity
-                    .status(identityResponse.getStatusCode())
-                    .body(identityResponse.getBody());
+                    .status(
+                            identityResponse.getStatusCode()
+                    )
+                    .body(
+                            identityResponse.getBody()
+                    );
 
         } catch (FeignException ex) {
 
             /*
              * Identity returned an authentication/session error.
              *
-             * 401 / 403 means:
-             * - refresh session is no longer usable
-             * - remove browser refresh cookie
-             * - remove CSRF session state
+             * 401 / 403 means the refresh session is no longer usable.
              */
-            if (ex.status() == HttpStatus.UNAUTHORIZED.value()
-                    || ex.status() == HttpStatus.FORBIDDEN.value()) {
+
+            if (ex.status()
+                    == HttpStatus.UNAUTHORIZED.value()
+                    || ex.status()
+                    == HttpStatus.FORBIDDEN.value()) {
 
                 terminateRefreshSession(
                         request,
@@ -243,13 +293,10 @@ public class GatewayAuthController {
                 );
             }
 
-            /*
-             * IMPORTANT:
-             *
-             * Return Identity's original ErrorResponse JSON
-             * instead of returning an empty response.
-             */
-            return buildFeignErrorResponse(ex);
+            return buildFeignErrorResponse(
+                    ex,
+                    request
+            );
         }
     }
 
@@ -260,13 +307,13 @@ public class GatewayAuthController {
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(
             HttpServletRequest request,
-            HttpServletResponse response) {
+            HttpServletResponse response
+    ) {
 
         /*
          * Invalid CSRF must NOT log the user out.
-         *
-         * Otherwise another website could force a logout.
          */
+
         if (!isCsrfValid(request)) {
 
             return ResponseEntity
@@ -281,7 +328,9 @@ public class GatewayAuthController {
                 );
 
         String csrfToken =
-                request.getHeader(CSRF_HEADER);
+                request.getHeader(
+                        CSRF_HEADER
+                );
 
         /*
          * Logout is idempotent.
@@ -289,20 +338,23 @@ public class GatewayAuthController {
          * No refresh token means there is simply
          * no Identity session to revoke.
          */
+
         if (refreshToken != null) {
 
             try {
 
                 identityClient.logout(
-                        REFRESH_COOKIE + "=" + refreshToken
+                        REFRESH_COOKIE
+                                + "="
+                                + refreshToken
                 );
 
-            } catch (FeignException ex) {
+            } catch (FeignException ignored) {
 
                 /*
                  * Best effort logout.
                  *
-                 * Even if Identity is unavailable, we still
+                 * Even if Identity is unavailable,
                  * remove browser-side session state.
                  *
                  * The server-side refresh token may remain
@@ -314,6 +366,7 @@ public class GatewayAuthController {
         /*
          * Delete Gateway CSRF state.
          */
+
         csrfTokenService.delete(
                 csrfToken
         );
@@ -321,6 +374,7 @@ public class GatewayAuthController {
         /*
          * Delete browser cookies.
          */
+
         deleteCookie(
                 response,
                 REFRESH_COOKIE
@@ -335,76 +389,136 @@ public class GatewayAuthController {
          * Frontend must discard access token as well.
          *
          * JWT is stateless and cannot be immediately revoked
-         * unless you implement token blacklisting.
+         * unless token blacklisting is implemented.
          */
-        return ResponseEntity.noContent().build();
+
+        return ResponseEntity
+                .noContent()
+                .build();
     }
 
     // =========================================================
     // 5. FEIGN ERROR RESPONSE
     // =========================================================
 
-    private ResponseEntity<?> buildFeignErrorResponse(
-            FeignException ex) {
+    private ResponseEntity<ErrorResponse>
+    buildFeignErrorResponse(
+            FeignException ex,
+            HttpServletRequest request
+    ) {
 
         int statusCode = ex.status();
 
         /*
-         * status() can be -1 when Feign cannot obtain
-         * an HTTP response, for example connection failure
-         * or Identity service being unavailable.
+         * Feign uses -1 when it could not obtain
+         * a real HTTP response.
+         *
+         * Example:
+         * - Identity service is down
+         * - connection refused
+         * - network failure
          */
+
         if (statusCode < 400 || statusCode >= 600) {
 
-            return ResponseEntity
-                    .status(HttpStatus.BAD_GATEWAY)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body("""
-                          {
-                              "status": 502,
-                              "code": "IDENTITY_SERVICE_UNAVAILABLE",
-                              "message": "Authentication service is currently unavailable"
-                          }
-                          """);
+            return buildResponse(
+                    HttpStatus.BAD_GATEWAY,
+                    "IDENTITY_SERVICE_UNAVAILABLE",
+                    "Authentication service is currently unavailable",
+                    request
+            );
         }
 
-        String responseBody = ex.contentUTF8();
+        String responseBody =
+                ex.contentUTF8();
 
         /*
-         * Identity normally returns JSON from its
-         * GlobalExceptionHandler.
+         * Identity normally returns our common ErrorResponse JSON.
+         *
+         * Deserialize it instead of forwarding a raw String.
          */
+
         if (responseBody != null
                 && !responseBody.isBlank()) {
 
-            return ResponseEntity
-                    .status(
-                            resolveStatus(statusCode)
-                    )
-                    .contentType(
-                            MediaType.APPLICATION_JSON
-                    )
-                    .body(responseBody);
+            try {
+
+                ErrorResponse errorResponse =
+                        objectMapper.readValue(
+                                responseBody,
+                                ErrorResponse.class
+                        );
+
+                return ResponseEntity
+                        .status(
+                                resolveStatus(statusCode)
+                        )
+                        .contentType(
+                                MediaType.APPLICATION_JSON
+                        )
+                        .body(errorResponse);
+
+            } catch (IOException ignored) {
+
+                /*
+                 * Identity returned a response body,
+                 * but it was not our expected ErrorResponse.
+                 *
+                 * Fall through to a safe Gateway response.
+                 */
+            }
         }
 
         /*
-         * If Identity returned no body, still return
-         * the correct HTTP status.
+         * Identity returned an error without a usable
+         * ErrorResponse body.
          */
-        return ResponseEntity
-                .status(
-                        resolveStatus(statusCode)
-                )
-                .build();
+
+        return buildResponse(
+                resolveStatus(statusCode),
+                "UPSTREAM_ERROR",
+                "Authentication service returned an error",
+                request
+        );
     }
 
     // =========================================================
-    // 6. CSRF
+    // 6. BUILD ERROR RESPONSE
+    // =========================================================
+
+    private ResponseEntity<ErrorResponse>
+    buildResponse(
+            HttpStatus status,
+            String code,
+            String message,
+            HttpServletRequest request
+    ) {
+
+        ErrorResponse response =
+                new ErrorResponse(
+                        Instant.now(),
+                        status.value(),
+                        code,
+                        message,
+                        request.getRequestURI()
+                );
+
+        return ResponseEntity
+                .status(status)
+                .contentType(
+                        MediaType.APPLICATION_JSON
+                )
+                .body(response);
+    }
+
+    // =========================================================
+    // 7. CSRF
     // =========================================================
 
     private String ensureCsrfToken(
             HttpServletRequest request,
-            HttpServletResponse response) {
+            HttpServletResponse response
+    ) {
 
         String existingToken =
                 extractCookie(
@@ -415,6 +529,7 @@ public class GatewayAuthController {
         /*
          * Reuse existing valid token.
          */
+
         if (existingToken != null
                 && csrfTokenService.validate(existingToken)) {
 
@@ -424,6 +539,7 @@ public class GatewayAuthController {
         /*
          * Existing cookie is stale.
          */
+
         if (existingToken != null) {
 
             csrfTokenService.delete(
@@ -434,6 +550,7 @@ public class GatewayAuthController {
         /*
          * Create new CSRF token.
          */
+
         String newToken =
                 csrfTokenService.create();
 
@@ -449,7 +566,8 @@ public class GatewayAuthController {
     }
 
     private boolean isCsrfValid(
-            HttpServletRequest request) {
+            HttpServletRequest request
+    ) {
 
         String headerToken =
                 request.getHeader(
@@ -477,6 +595,7 @@ public class GatewayAuthController {
          *
          * token exists in Redis.
          */
+
         return headerToken.equals(cookieToken)
                 && csrfTokenService.validate(
                         headerToken
@@ -484,12 +603,13 @@ public class GatewayAuthController {
     }
 
     // =========================================================
-    // 7. TERMINATE REFRESH SESSION
+    // 8. TERMINATE REFRESH SESSION
     // =========================================================
 
     private void terminateRefreshSession(
             HttpServletRequest request,
-            HttpServletResponse response) {
+            HttpServletResponse response
+    ) {
 
         String refreshToken =
                 extractCookie(
@@ -506,12 +626,15 @@ public class GatewayAuthController {
         /*
          * Try to revoke refresh token in Identity.
          */
+
         if (refreshToken != null) {
 
             try {
 
                 identityClient.logout(
-                        REFRESH_COOKIE + "=" + refreshToken
+                        REFRESH_COOKIE
+                                + "="
+                                + refreshToken
                 );
 
             } catch (FeignException ignored) {
@@ -527,6 +650,7 @@ public class GatewayAuthController {
         /*
          * Remove Gateway-side CSRF state.
          */
+
         csrfTokenService.delete(
                 csrfCookie
         );
@@ -534,6 +658,7 @@ public class GatewayAuthController {
         /*
          * Remove browser cookies.
          */
+
         deleteCookie(
                 response,
                 REFRESH_COOKIE
@@ -546,12 +671,13 @@ public class GatewayAuthController {
     }
 
     // =========================================================
-    // 8. COOKIE HELPERS
+    // 9. COOKIE HELPERS
     // =========================================================
 
     private String extractCookie(
             HttpServletRequest request,
-            String name) {
+            String name
+    ) {
 
         Cookie[] cookies =
                 request.getCookies();
@@ -576,7 +702,8 @@ public class GatewayAuthController {
             String name,
             String value,
             boolean httpOnly,
-            Duration maxAge) {
+            Duration maxAge
+    ) {
 
         ResponseCookie cookie =
                 ResponseCookie
@@ -599,7 +726,8 @@ public class GatewayAuthController {
 
     private void deleteCookie(
             HttpServletResponse response,
-            String name) {
+            String name
+    ) {
 
         ResponseCookie cookie =
                 ResponseCookie
@@ -623,19 +751,18 @@ public class GatewayAuthController {
     }
 
     // =========================================================
-    // 9. STATUS HELPER
+    // 10. STATUS HELPER
     // =========================================================
 
     private HttpStatus resolveStatus(
-            int status) {
+            int status
+    ) {
 
         if (status >= 400 && status < 600) {
 
             try {
 
-                return HttpStatus.valueOf(
-                        status
-                );
+                return HttpStatus.valueOf(status);
 
             } catch (IllegalArgumentException ignored) {
 
@@ -646,3 +773,4 @@ public class GatewayAuthController {
         return HttpStatus.INTERNAL_SERVER_ERROR;
     }
 }
+

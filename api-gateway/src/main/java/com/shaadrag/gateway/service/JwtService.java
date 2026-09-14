@@ -1,10 +1,13 @@
 package com.shaadrag.gateway.service;
 
 import com.shaadrag.gateway.security.JwtAuthenticationException;
+
 import io.jsonwebtoken.Claims;
-// import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Service;
 
 import java.security.PublicKey;
@@ -16,61 +19,122 @@ public class JwtService {
 
     private final PublicKey publicKey;
 
-    public Claims extractAllClaims(String token) {
-
-        return Jwts.parser()
-                .verifyWith(publicKey)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
 
         // ExpiredJwtException
         // MalformedJwtException
         // SignatureException
         // UnsupportedJwtException
+
+    // =========================================================
+    // EXTRACT CLAIMS
+    // =========================================================
+
+    public Claims extractAllClaims(
+            String token
+    ) {
+
+        try {
+
+            return Jwts.parser()
+                    .verifyWith(publicKey)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+
+        } catch (JwtException |
+                 IllegalArgumentException ex) {
+
+            throw new JwtAuthenticationException(
+                    "Invalid or expired JWT token",
+                    ex
+            );
+        }
     }
 
-    public String extractUserId(Claims claims) {
+    // =========================================================
+    // EXTRACT USER ID
+    // =========================================================
+
+    public String extractUserId(
+            Claims claims
+    ) {
 
         return claims.getSubject();
     }
 
-    public String extractEmail(Claims claims) {
+    // =========================================================
+    // EXTRACT EMAIL
+    // =========================================================
 
-        return claims.get("email", String.class);
+    public String extractEmail(
+            Claims claims
+    ) {
+
+        return claims.get(
+                "email",
+                String.class
+        );
     }
 
-    public String extractRole(Claims claims) {
+    // =========================================================
+    // EXTRACT ROLE
+    // =========================================================
 
-        return claims.get("role", String.class);
+    public String extractRole(
+            Claims claims
+    ) {
+
+        return claims.get(
+                "role",
+                String.class
+        );
     }
 
-    public void validateClaims(Claims claims) {
+    // =========================================================
+    // VALIDATE CLAIMS
+    // =========================================================
 
-        Date expiration = claims.getExpiration();
+    public void validateClaims(
+            Claims claims
+    ) {
+
+        Date expiration =
+                claims.getExpiration();
 
         if (expiration == null) {
+
             throw new JwtAuthenticationException(
-                    "JWT expiration is missing");
+                    "JWT expiration is missing"
+            );
         }
 
         if (expiration.before(new Date())) {
+
             throw new JwtAuthenticationException(
-                    "JWT token has expired");
+                    "JWT token has expired"
+            );
         }
 
-        String userId = claims.getSubject();
+        String userId =
+                extractUserId(claims);
 
-        if (userId == null || userId.isBlank()) {
+        if (userId == null ||
+            userId.isBlank()) {
+
             throw new JwtAuthenticationException(
-                    "JWT user ID is missing");
+                    "JWT user ID is missing"
+            );
         }
 
-        String role = extractRole(claims);
+        String role =
+                extractRole(claims);
 
-        if (role == null || role.isBlank()) {
+        if (role == null ||
+            role.isBlank()) {
+
             throw new JwtAuthenticationException(
-                    "JWT role is missing");
+                    "JWT role is missing"
+            );
         }
     }
 }

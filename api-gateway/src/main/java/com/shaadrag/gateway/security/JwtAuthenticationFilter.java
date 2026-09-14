@@ -3,7 +3,6 @@ package com.shaadrag.gateway.security;
 import com.shaadrag.gateway.service.JwtService;
 
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -17,7 +16,6 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
-
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -44,14 +42,12 @@ public class JwtAuthenticationFilter
         String authHeader =
                 request.getHeader("Authorization");
 
-        /*
-         * No Authorization header.
-         *
-         * Don't reject here.
-         * Spring Security will decide whether
-         * authentication is required.
-         */
-        if (authHeader == null || authHeader.isBlank()) {
+        // =====================================================
+        // NO AUTHORIZATION HEADER
+        // =====================================================
+
+        if (authHeader == null ||
+            authHeader.isBlank()) {
 
             filterChain.doFilter(
                     request,
@@ -61,10 +57,10 @@ public class JwtAuthenticationFilter
             return;
         }
 
-        /*
-         * Authorization header exists,
-         * but does not contain Bearer authentication.
-         */
+        // =====================================================
+        // INVALID AUTHORIZATION HEADER
+        // =====================================================
+
         if (!authHeader.startsWith("Bearer ")) {
 
             authenticationEntryPoint.commence(
@@ -81,9 +77,10 @@ public class JwtAuthenticationFilter
         String token =
                 authHeader.substring(7).trim();
 
-        /*
-         * Bearer exists but token is empty.
-         */
+        // =====================================================
+        // EMPTY TOKEN
+        // =====================================================
+
         if (token.isBlank()) {
 
             authenticationEntryPoint.commence(
@@ -99,15 +96,17 @@ public class JwtAuthenticationFilter
 
         try {
 
-            /*
-             * Parse JWT once.
-             */
+            // =================================================
+            // PARSE JWT
+            // =================================================
+
             Claims claims =
                     jwtService.extractAllClaims(token);
 
-            /*
-             * Validate required claims.
-             */
+            // =================================================
+            // VALIDATE CLAIMS
+            // =================================================
+
             jwtService.validateClaims(claims);
 
             String userId =
@@ -116,17 +115,15 @@ public class JwtAuthenticationFilter
             String role =
                     jwtService.extractRole(claims);
 
-            /*
-             * ADMIN becomes ROLE_ADMIN.
-             */
+            // =================================================
+            // CREATE AUTHENTICATION
+            // =================================================
+
             SimpleGrantedAuthority authority =
                     new SimpleGrantedAuthority(
                             "ROLE_" + role
                     );
 
-            /*
-             * Create authenticated user.
-             */
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
                             userId,
@@ -139,18 +136,18 @@ public class JwtAuthenticationFilter
                             .buildDetails(request)
             );
 
-            /*
-             * Store authentication.
-             */
+            // =================================================
+            // STORE AUTHENTICATION
+            // =================================================
+
             SecurityContextHolder
                     .getContext()
-                    .setAuthentication(
-                            authentication
-                    );
+                    .setAuthentication(authentication);
 
-            /*
-             * Continue request.
-             */
+            // =================================================
+            // CONTINUE
+            // =================================================
+
             filterChain.doFilter(
                     request,
                     response
@@ -164,19 +161,6 @@ public class JwtAuthenticationFilter
                     request,
                     response,
                     ex
-            );
-
-        } catch (JwtException | IllegalArgumentException ex) {
-
-            SecurityContextHolder.clearContext();
-
-            authenticationEntryPoint.commence(
-                    request,
-                    response,
-                    new JwtAuthenticationException(
-                            "Invalid or expired JWT token",
-                            ex
-                    )
             );
         }
     }

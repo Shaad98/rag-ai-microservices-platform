@@ -1,29 +1,24 @@
 package com.shaadrag.identity.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.shaadrag.identity.handler.ErrorResponseWriter;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import lombok.RequiredArgsConstructor;
 
-import org.springframework.http.MediaType;
-
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
-
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
 public class IdentityAccessDeniedHandler
         implements AccessDeniedHandler {
 
-    private final ObjectMapper objectMapper;
+    private final ErrorResponseWriter errorResponseWriter;
 
     @Override
     public void handle(
@@ -32,40 +27,12 @@ public class IdentityAccessDeniedHandler
             AccessDeniedException exception
     ) throws IOException {
 
-        response.setStatus(
-                HttpServletResponse.SC_FORBIDDEN
-        );
-
-        response.setContentType(
-                MediaType.APPLICATION_JSON_VALUE
-        );
-
-        Map<String, Object> body =
-                new LinkedHashMap<>();
-
-        body.put(
-                "status",
-                HttpServletResponse.SC_FORBIDDEN
-        );
-
-        body.put(
-                "code",
-                "FORBIDDEN"
-        );
-
-        body.put(
-                "message",
+        errorResponseWriter.write(
+                request,
+                response,
+                HttpServletResponse.SC_FORBIDDEN,
+                "FORBIDDEN",
                 "You do not have permission to access this resource"
-        );
-
-        body.put(
-                "path",
-                request.getRequestURI()
-        );
-
-        objectMapper.writeValue(
-                response.getOutputStream(),
-                body
         );
     }
 }
