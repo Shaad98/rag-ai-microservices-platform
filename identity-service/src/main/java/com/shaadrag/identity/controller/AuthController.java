@@ -6,6 +6,8 @@ import com.shaadrag.identity.dto.response.LoginResponse;
 import com.shaadrag.identity.dto.response.RefreshTokenResponse;
 import com.shaadrag.identity.dto.response.RegisterResponse;
 import com.shaadrag.identity.service.AuthService;
+
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,7 +26,7 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<RegisterResponse> register(
-            @RequestBody RegisterRequest request) {
+            @Valid @RequestBody RegisterRequest request) {
 
         RegisterResponse response =
                 authService.register(request);
