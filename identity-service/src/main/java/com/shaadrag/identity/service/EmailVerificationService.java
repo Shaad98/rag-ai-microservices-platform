@@ -5,6 +5,8 @@ import com.shaadrag.identity.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -56,6 +58,7 @@ public class EmailVerificationService {
     // SEND VERIFICATION EMAIL
     // =========================================================
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void sendVerificationEmail(
             User user) {
 
