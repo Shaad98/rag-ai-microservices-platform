@@ -274,7 +274,6 @@ public class GlobalExceptionHandler {
                                 request);
         }
 
-    
         // =========================================================
         // FALLBACK
         // =========================================================
@@ -304,6 +303,12 @@ public class GlobalExceptionHandler {
                         String code,
                         String message,
                         HttpServletRequest request) {
+
+                log.error(
+                                "Returning error: status={}, code={}, path={}",
+                                status.value(),
+                                code,
+                                request.getRequestURI());
 
                 ErrorResponse response = new ErrorResponse(
                                 LocalDateTime.now(),
