@@ -1,9 +1,10 @@
 package com.shaadrag.gateway.dto.response;
 
-import java.time.Instant;
+// import java.time.Instant;
+import java.time.LocalDateTime;
 
 public record ErrorResponse(
-        Instant timestamp,
+        LocalDateTime timestamp,
         int status,
         String code,
         String message,

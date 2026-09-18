@@ -33,7 +33,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.time.Instant;
+// import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @RestController
@@ -496,7 +497,8 @@ public class GatewayAuthController {
 
         ErrorResponse response =
                 new ErrorResponse(
-                        Instant.now(),
+                        // Instant.now(),
+                        LocalDateTime.now(),
                         status.value(),
                         code,
                         message,

@@ -17,7 +17,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import jakarta.validation.ConstraintViolationException;
 
-import java.time.Instant;
+// import java.time.Instant;
+import java.time.LocalDateTime;
 
 @Slf4j
 @RestControllerAdvice
@@ -198,7 +199,8 @@ public class GlobalExceptionHandler {
 
         ErrorResponse response =
                 new ErrorResponse(
-                        Instant.now(),
+                        // Instant.now(),
+                        LocalDateTime.now(),
                         status.value(),
                         code,
                         message,

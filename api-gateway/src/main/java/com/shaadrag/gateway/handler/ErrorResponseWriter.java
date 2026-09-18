@@ -12,7 +12,8 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.time.Instant;
+// import java.time.Instant;
+import java.time.LocalDateTime;
 
 @Component
 @RequiredArgsConstructor
@@ -30,7 +31,8 @@ public class ErrorResponseWriter {
 
         ErrorResponse errorResponse =
                 new ErrorResponse(
-                        Instant.now(),
+                        // Instant.now(),
+                        LocalDateTime.now(),
                         status,
                         code,
                         message,
