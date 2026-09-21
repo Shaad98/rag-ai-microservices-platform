@@ -27,194 +27,177 @@ import java.io.IOException;
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter
-        extends OncePerRequestFilter {
+                extends OncePerRequestFilter {
 
-    private final JwtService jwtService;
+        private final JwtService jwtService;
 
-    private final CustomUserDetailsService userDetailsService;
+        private final CustomUserDetailsService userDetailsService;
 
-    private final AuthenticationEntryPoint authenticationEntryPoint;
+        private final AuthenticationEntryPoint authenticationEntryPoint;
 
-    @Override
-    protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain
-    ) throws ServletException, IOException {
+        @Override
+        protected void doFilterInternal(
+                        HttpServletRequest request,
+                        HttpServletResponse response,
+                        FilterChain filterChain) throws ServletException, IOException {
 
-        String authHeader =
-                request.getHeader("Authorization");
-
-        /*
-         * No Authorization header.
-         *
-         * Don't reject here.
-         * Spring Security will decide whether
-         * authentication is required.
-         */
-        if (authHeader == null ||
-            authHeader.isBlank()) {
-
-            filterChain.doFilter(
-                    request,
-                    response
-            );
-
-            return;
-        }
-
-        /*
-         * Authorization header exists,
-         * but does not contain Bearer authentication.
-         */
-        if (!authHeader.startsWith("Bearer ")) {
-
-            authenticationEntryPoint.commence(
-                    request,
-                    response,
-                    new JwtAuthenticationException(
-                            "Invalid Authorization header"
-                    )
-            );
-
-            return;
-        }
-
-        String token =
-                authHeader.substring(7).trim();
-
-        /*
-         * Bearer exists but token is empty.
-         */
-        if (token.isBlank()) {
-
-            authenticationEntryPoint.commence(
-                    request,
-                    response,
-                    new JwtAuthenticationException(
-                            "Bearer token is missing"
-                    )
-            );
-
-            return;
-        }
-
-        try {
-
-            /*
-             * Parse JWT once.
-             */
-            Claims claims =
-                    jwtService.extractAllClaims(token);
-
-            /*
-             * Validate JWT claims.
-             */
-            jwtService.validateClaims(claims);
-
-            /*
-             * Extract email from already parsed claims.
-             */
-            String email =
-                    jwtService.extractEmail(claims);
-
-            /*
-             * Don't authenticate twice.
-             */
-            if (SecurityContextHolder
-                    .getContext()
-                    .getAuthentication() == null) {
+                String authHeader = request.getHeader("Authorization");
 
                 /*
-                 * Load user from database.
+                 * No Authorization header.
+                 *
+                 * Don't reject here.
+                 * Spring Security will decide whether
+                 * authentication is required.
                  */
-                UserDetails userDetails =
-                        userDetailsService
-                                .loadUserByUsername(email);
+                if (authHeader == null ||
+                                authHeader.isBlank()) {
 
-                /*
-                 * Compare JWT user information
-                 * with database user.
-                 */
-                if (jwtService.isTokenValid(
-                        claims,
-                        userDetails
-                )) {
+                        filterChain.doFilter(
+                                        request,
+                                        response);
 
-                    UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(
-                                    userDetails,
-                                    null,
-                                    userDetails.getAuthorities()
-                            );
-
-                    authentication.setDetails(
-                            new WebAuthenticationDetailsSource()
-                                    .buildDetails(request)
-                    );
-
-                    /*
-                     * Store authenticated user.
-                     */
-                    SecurityContextHolder
-                            .getContext()
-                            .setAuthentication(
-                                    authentication
-                            );
+                        return;
                 }
-            }
 
-            /*
-             * Continue request.
-             */
-            filterChain.doFilter(
-                    request,
-                    response
-            );
+                /*
+                 * Authorization header exists,
+                 * but does not contain Bearer authentication.
+                 */
+                if (!authHeader.startsWith("Bearer ")) {
 
-        } catch (JwtAuthenticationException ex) {
+                        authenticationEntryPoint.commence(
+                                        request,
+                                        response,
+                                        new JwtAuthenticationException(
+                                                        "Invalid Authorization header"));
 
-            /*
-             * JWT authentication failed.
-             */
-            SecurityContextHolder.clearContext();
+                        return;
+                }
 
-            authenticationEntryPoint.commence(
-                    request,
-                    response,
-                    ex
-            );
+                String token = authHeader.substring(7).trim();
 
-        } catch (AuthenticationException ex) {
+                /*
+                 * Bearer exists but token is empty.
+                 */
+                if (token.isBlank()) {
 
-            /*
-             * User authentication failed,
-             * for example user not found.
-             */
-            SecurityContextHolder.clearContext();
+                        authenticationEntryPoint.commence(
+                                        request,
+                                        response,
+                                        new JwtAuthenticationException(
+                                                        "Bearer token is missing"));
 
-            authenticationEntryPoint.commence(
-                    request,
-                    response,
-                    ex
-            );
+                        return;
+                }
 
-        } catch (JwtException |
-                 IllegalArgumentException ex) {
+                try {
 
-            /*
-             * Unexpected JWT parsing failure.
-             */
-            SecurityContextHolder.clearContext();
+                        /*
+                         * Parse JWT once.
+                         */
+                        Claims claims = jwtService.extractAllClaims(token);
 
-            authenticationEntryPoint.commence(
-                    request,
-                    response,
-                    new JwtAuthenticationException(
-                            "Invalid or expired JWT token",
-                            ex
-                    )
-            );
+                        /*
+                         * Validate JWT claims.
+                         */
+                        jwtService.validateClaims(claims);
+
+                        /*
+                         * Extract email from already parsed claims.
+                         */
+                        String email = jwtService.extractEmail(claims);
+
+                        /*
+                         * Don't authenticate twice.
+                         */
+                        if (SecurityContextHolder
+                                        .getContext()
+                                        .getAuthentication() == null) {
+
+                                /*
+                                 * Load user from database.
+                                 */
+                                UserDetails userDetails = userDetailsService
+                                                .loadUserByUsername(email);
+
+                                if (!userDetails.isEnabled()) {
+                                        throw new JwtAuthenticationException(
+                                                        "User account is disabled");
+                                }
+
+                                /*
+                                 * Compare JWT user information
+                                 * with database user.
+                                 */
+                                if (jwtService.isTokenValid(
+                                                claims,
+                                                userDetails)) {
+
+                                        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                                                        userDetails,
+                                                        null,
+                                                        userDetails.getAuthorities());
+
+                                        authentication.setDetails(
+                                                        new WebAuthenticationDetailsSource()
+                                                                        .buildDetails(request));
+
+                                        /*
+                                         * Store authenticated user.
+                                         */
+                                        SecurityContextHolder
+                                                        .getContext()
+                                                        .setAuthentication(
+                                                                        authentication);
+                                }
+                        }
+
+                        /*
+                         * Continue request.
+                         */
+                        filterChain.doFilter(
+                                        request,
+                                        response);
+
+                } catch (JwtAuthenticationException ex) {
+
+                        /*
+                         * JWT authentication failed.
+                         */
+                        SecurityContextHolder.clearContext();
+
+                        authenticationEntryPoint.commence(
+                                        request,
+                                        response,
+                                        ex);
+
+                } catch (AuthenticationException ex) {
+
+                        /*
+                         * User authentication failed,
+                         * for example user not found.
+                         */
+                        SecurityContextHolder.clearContext();
+
+                        authenticationEntryPoint.commence(
+                                        request,
+                                        response,
+                                        ex);
+
+                } catch (JwtException | IllegalArgumentException ex) {
+
+                        /*
+                         * Unexpected JWT parsing failure.
+                         */
+                        SecurityContextHolder.clearContext();
+
+                        authenticationEntryPoint.commence(
+                                        request,
+                                        response,
+                                        new JwtAuthenticationException(
+                                                        "Invalid or expired JWT token",
+                                                        ex));
+                }
         }
-    }
 }
