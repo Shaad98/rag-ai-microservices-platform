@@ -69,6 +69,10 @@ public class SecurityConfig {
                         ).permitAll()
 
                         .requestMatchers(
+                                "/password/forgot",
+                                "/password/reset"
+                        ).permitAll()
+                        .requestMatchers(
                                 "/actuator/gateway/**"
                         ).permitAll()
 
