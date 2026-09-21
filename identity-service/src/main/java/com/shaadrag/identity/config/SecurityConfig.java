@@ -80,12 +80,18 @@ public class SecurityConfig {
                         ).permitAll()
 
                         .requestMatchers(
+                                "/password/forgot",
+                                "/password/reset"
+                        ).permitAll()
+                        
+                        .requestMatchers(
                                 "/email-verification/verify"
                         ).permitAll()
 
                         .requestMatchers(
                                 "/actuator/health"
                         ).permitAll()
+
 
                         .requestMatchers(
                                 "/admin/**"
