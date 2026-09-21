@@ -1,5 +1,7 @@
 package com.shaadrag.identity.dto.request;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,6 +12,9 @@ import lombok.NoArgsConstructor;
 
 public class ResetPasswordRequest {
 
-    private String token;
+    @NotBlank(message = "Verification token required")
+    private String token; // Token inside link
+    @NotBlank(message = "New password required")
+    @Size(min = 8,message = "Password must contain atleast 8 characters")
     private String newPassword;
 }
