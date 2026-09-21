@@ -1,7 +1,7 @@
 package com.shaadrag.identity.repository;
 
-import com.shaadrag.identity.dto.response.UserResponse;
-import com.shaadrag.identity.model.User;
+import java.time.LocalDate;
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -9,8 +9,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDate;
-import java.util.Optional;
+import com.shaadrag.identity.dto.response.UserResponse;
+import com.shaadrag.identity.model.User;
 
 public interface UserRepository extends JpaRepository<User, String> {
 
@@ -54,18 +54,25 @@ public interface UserRepository extends JpaRepository<User, String> {
             @Param("userId") String userId
     );
 
+    Page<User> findByUserIdNot(
+            String userId,
+            Pageable pageable
+    );
 
-     Page<User> findByEmailContainingIgnoreCase(
+    Page<User> findByUserIdNotAndEmailContainingIgnoreCase(
+            String userId,
             String email,
             Pageable pageable
     );
 
-    Page<User> findByFullNameContainingIgnoreCase(
+    Page<User> findByUserIdNotAndFullNameContainingIgnoreCase(
+            String userId,
             String fullName,
             Pageable pageable
     );
 
-    Page<User> findByDateOfBirth(
+    Page<User> findByUserIdNotAndDateOfBirth(
+            String userId,
             LocalDate dateOfBirth,
             Pageable pageable
     );

@@ -19,105 +19,149 @@ import lombok.RequiredArgsConstructor;
 @Transactional
 public class AdminUserService {
 
-    private final UserRepository userRepository;
+        private final UserRepository userRepository;
 
-    @Transactional(readOnly = true)
-    public Page<AdminUserResponse> getAllUsers(Pageable pageable) {
+        @Transactional(readOnly = true)
+        public Page<AdminUserResponse> getAllUsers(
+                        String currentAdminUserId,
+                        Pageable pageable) {
 
-        return userRepository.findAll(pageable)
-                .map(this::toAdminUserResponse);
-    }
+                return userRepository
+                                .findByUserIdNot(currentAdminUserId, pageable)
+                                .map(this::toAdminUserResponse);
+        }
 
-    @Transactional(readOnly = true)
-    public Page<AdminUserResponse> searchByEmail(
-            String email,
-            Pageable pageable) {
+        @Transactional(readOnly = true)
+        public Page<AdminUserResponse> searchByEmail(
+                        String currentAdminUserId,
+                        String email,
+                        Pageable pageable) {
 
-        return userRepository
-                .findByEmailContainingIgnoreCase(email, pageable)
-                .map(this::toAdminUserResponse);
-    }
+                return userRepository
+                                .findByUserIdNotAndEmailContainingIgnoreCase(
+                                                currentAdminUserId,
+                                                email,
+                                                pageable)
+                                .map(this::toAdminUserResponse);
+        }
 
-    @Transactional(readOnly = true)
-    public Page<AdminUserResponse> searchByName(
-            String name,
-            Pageable pageable) {
+        @Transactional(readOnly = true)
+        public Page<AdminUserResponse> searchByName(
+                        String currentAdminUserId,
+                        String name,
+                        Pageable pageable) {
 
-        return userRepository
-                .findByFullNameContainingIgnoreCase(name, pageable)
-                .map(this::toAdminUserResponse);
-    }
+                return userRepository
+                                .findByUserIdNotAndFullNameContainingIgnoreCase(
+                                                currentAdminUserId,
+                                                name,
+                                                pageable)
+                                .map(this::toAdminUserResponse);
+        }
 
-    @Transactional(readOnly = true)
-    public Page<AdminUserResponse> searchByDateOfBirth(
-            LocalDate dateOfBirth,
-            Pageable pageable) {
+        @Transactional(readOnly = true)
+        public Page<AdminUserResponse> searchByDateOfBirth(
+                        String currentAdminUserId,
+                        LocalDate dateOfBirth,
+                        Pageable pageable) {
 
-        return userRepository
-                .findByDateOfBirth(dateOfBirth, pageable)
-                .map(this::toAdminUserResponse);
-    }
+                return userRepository
+                                .findByUserIdNotAndDateOfBirth(
+                                                currentAdminUserId,
+                                                dateOfBirth,
+                                                pageable)
+                                .map(this::toAdminUserResponse);
+        }
 
-    @Transactional(readOnly = true)
-    public AdminUserResponse getUserDetails(String userId) {
+        @Transactional(readOnly = true)
+        public AdminUserResponse getUserDetails(String userId) {
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() ->
-                        new RuntimeException("User not found"));
+                User user = userRepository.findById(userId)
+                                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        return toAdminUserResponse(user);
-    }
+                return toAdminUserResponse(user);
+        }
 
-    public AdminUserResponse activateUser(String userId) {
+        public AdminUserResponse activateUser(
+                        String currentAdminUserId,
+                        String userId) {
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() ->
-                        new RuntimeException("User not found"));
+                validateNotSelf(currentAdminUserId, userId);
 
-        user.setIsEnabled(true);
+                User user = userRepository.findById(userId)
+                                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        User updatedUser = userRepository.save(user);
+                user.setIsEnabled(true);
 
-        return toAdminUserResponse(updatedUser);
-    }
+                User updatedUser = userRepository.save(user);
 
-    public AdminUserResponse deactivateUser(String userId) {
+                return toAdminUserResponse(updatedUser);
+        }
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() ->
-                        new RuntimeException("User not found"));
+        public AdminUserResponse deactivateUser(
+                        String currentAdminUserId,
+                        String userId) {
 
-        user.setIsEnabled(false);
+                validateNotSelf(currentAdminUserId, userId);
 
-        User updatedUser = userRepository.save(user);
+                User user = userRepository.findById(userId)
+                                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        return toAdminUserResponse(updatedUser);
-    }
+                user.setIsEnabled(false);
 
-    public AdminUserResponse changeRole(
-            String userId,
-            Role role) {
+                User updatedUser = userRepository.save(user);
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() ->
-                        new RuntimeException("User not found"));
+                return toAdminUserResponse(updatedUser);
+        }
 
-        user.setRole(role);
+        public AdminUserResponse changeRole(
+                        String currentAdminUserId,
+                        String userId,
+                        Role role) {
 
-        User updatedUser = userRepository.save(user);
+                validateNotSelf(currentAdminUserId, userId);
 
-        return toAdminUserResponse(updatedUser);
-    }
+                User user = userRepository.findById(userId)
+                                .orElseThrow(() -> new RuntimeException("User not found"));
 
-    private AdminUserResponse toAdminUserResponse(User user) {
+                user.setRole(role);
 
-        return new AdminUserResponse(
-                user.getUserId(),
-                user.getFullName(),
-                user.getEmail(),
-                user.getDateOfBirth(),
-                user.getRole(),
-                user.getIsEnabled()
-        );
-    }
+                User updatedUser = userRepository.save(user);
+
+                return toAdminUserResponse(updatedUser);
+        }
+
+        public void deleteUser(
+                        String currentAdminUserId,
+                        String userId) {
+
+                validateNotSelf(currentAdminUserId, userId);
+
+                if (!userRepository.existsById(userId)) {
+                        throw new RuntimeException("User not found");
+                }
+
+                userRepository.deleteById(userId);
+        }
+
+        private void validateNotSelf(
+                        String currentAdminUserId,
+                        String targetUserId) {
+
+                if (currentAdminUserId.equals(targetUserId)) {
+                        throw new IllegalStateException(
+                                        "Admin cannot modify their own account");
+                }
+        }
+
+        private AdminUserResponse toAdminUserResponse(User user) {
+
+                return new AdminUserResponse(
+                                user.getUserId(),
+                                user.getFullName(),
+                                user.getEmail(),
+                                user.getDateOfBirth(),
+                                user.getRole(),
+                                user.getIsEnabled());
+        }
 }
