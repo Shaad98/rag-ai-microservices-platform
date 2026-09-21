@@ -114,7 +114,7 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         // null means don't update that field
-        if (fullName != null) {
+        if (fullName != null && !fullName.isBlank()) {
             user.setFullName(fullName);
         }
 
