@@ -24,14 +24,14 @@ app = FastAPI(
 )
 
 
-@app.get("/actuator/health")
+@app.get("/ai/actuator/health")
 def health():
     return {
         "status": "UP"
     }
 
 
-@app.get("/security-test")
+@app.get("/ai/security-test")
 def security_test(
     current_user: AuthenticatedUser = Depends(
         get_current_user
