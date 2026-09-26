@@ -81,6 +81,10 @@ public class SecurityConfig {
                         ).permitAll()
 
                         .requestMatchers(
+                                "/ai/actuator/health"
+                        ).permitAll()
+
+                        .requestMatchers(
                                 "/admin/**"
                         ).hasRole("ADMIN")
 
