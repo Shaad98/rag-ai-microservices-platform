@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
@@ -9,8 +10,9 @@ from ai_service.security.jwt_service import AuthenticatedUser
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+
     # Application startup
-    register_with_eureka()
+    await asyncio.to_thread(register_with_eureka)
 
     yield
 
